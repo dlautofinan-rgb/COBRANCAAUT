@@ -269,7 +269,7 @@
 <div class="container">
     <header>
         <h1>Cobrança Automática WhatsApp</h1>
-        <span>Leitor de Tabela .DOCX + Firebase DB</span>
+        <span>Leitor de Tabela .DOCX + Realtime Database</span>
     </header>
 
     <div class="automation-card">
@@ -316,19 +316,20 @@
 
     <div class="clients-grid" id="clientsGrid">
         <div class="empty-state">
-            Buscando cobranças salvas no Firebase...
+            Buscando cobranças salvas no Realtime Database...
         </div>
     </div>
 </div>
 
-<!-- Firebase SDK (Módulos JS) -->
+<!-- Firebase Realtime Database SDK -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCIZeZ3VIPiH25x6vr-OJ13becfc3dGeKg",
         authDomain: "lancamentosaut.firebaseapp.com",
+        databaseURL: "https://lancamentosaut-default-rtdb.firebaseio.com", // Adicione o link do Realtime DB do seu console
         projectId: "lancamentosaut",
         storageBucket: "lancamentosaut.firebasestorage.app",
         messagingSenderId: "226414592637",
@@ -336,74 +337,74 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
 
-    // Salvar dados no Firebase
+    // Salvar no Realtime Database
     window.salvarNoFirebase = async function(clientsData) {
         try {
             const batchPromises = Object.keys(clientsData).map(clientKey => {
                 const client = clientsData[clientKey];
                 const docId = clientKey.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-                return setDoc(doc(db, "cobrancas", docId), {
+                return set(ref(db, 'cobrancas/' + docId), {
                     cliente: client.name,
                     vendedor: client.seller,
                     itens: client.items,
                     valorPendente: client.totalPending,
                     phone: client.phone || '',
                     ultimaAtualizacao: new Date().toISOString()
-                }, { merge: true });
+                });
             });
 
             await Promise.all(batchPromises);
-            console.log("Dados sincronizados no Firebase com sucesso!");
+            console.log("Dados salvos no Realtime Database com sucesso!");
         } catch (error) {
-            console.error("Erro ao salvar no Firebase:", error);
+            console.error("Erro ao salvar no Realtime Database:", error);
         }
     };
 
-    // Carregar dados salvos no Firebase ao abrir a página
+    // Leitura inicial dos dados
     window.carregarDoFirebase = async function() {
         try {
-            const querySnapshot = await getDocs(collection(db, "cobrancas"));
-            if (querySnapshot.empty) {
-                document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Nenhum dado salvo encontrado no Firebase. Carregue um arquivo .docx acima.</div>';
+            const snapshot = await get(ref(db, 'cobrancas'));
+            if (!snapshot.exists()) {
+                document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Nenhum dado salvo encontrado no Realtime Database. Carregue um arquivo .docx.</div>';
                 return;
             }
 
+            const data = snapshot.val();
             let firebaseClients = {};
             let totalItemsCount = 0;
 
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                firebaseClients[data.cliente] = {
-                    name: data.cliente,
-                    seller: data.vendedor,
-                    items: data.itens || [],
-                    totalPending: data.valorPendente || 0,
-                    phone: data.phone || ''
+            Object.keys(data).forEach((key) => {
+                const item = data[key];
+                firebaseClients[item.cliente] = {
+                    name: item.cliente,
+                    seller: item.vendedor,
+                    items: item.itens || [],
+                    totalPending: item.valorPendente || 0,
+                    phone: item.phone || ''
                 };
-                totalItemsCount += (data.itens ? data.itens.length : 0);
+                totalItemsCount += (item.itens ? item.itens.length : 0);
             });
 
             window.clientsData = firebaseClients;
             window.renderDashboard(totalItemsCount);
         } catch (error) {
-            console.error("Erro ao carregar dados do Firebase:", error);
-            document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Nenhum registro no banco de dados. Carregue um arquivo .docx para iniciar.</div>';
+            console.error("Erro ao carregar do Realtime Database:", error);
+            document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Erro ao acessar a base. Verifique as regras de leitura do banco.</div>';
         }
     };
 
-    // Salvar o telefone digitado pelo usuário
+    // Atualizar telefone
     window.salvarTelefoneNoFirebase = async function(clientName, phone) {
         try {
             const docId = clientName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-            await setDoc(doc(db, "cobrancas", docId), { phone: phone }, { merge: true });
+            await update(ref(db, 'cobrancas/' + docId), { phone: phone });
         } catch (error) {
-            console.error("Erro ao atualizar telefone:", error);
+            console.error("Erro ao salvar telefone:", error);
         }
     };
 
-    // Executa a busca assim que a página carrega
     window.addEventListener('DOMContentLoaded', () => {
         window.carregarDoFirebase();
     });
