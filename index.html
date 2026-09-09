@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cobrança WhatsApp Automatizado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #075e54;
+            --primary-light: #128c7e;
+            --whatsapp-green: #25d366;
+            --bg: #f4f6f9;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --border: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h1 { font-size: 22px; font-weight: 600; }
+
+        .automation-card {
+            background: #eef7f5;
+            border: 2px solid var(--primary-light);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .automation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .automation-title {
+            font-weight: bold;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+
+        .schedule-info {
+            background: #ffffff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            border: 1px solid var(--primary-light);
+        }
+
+        .automation-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            background-color: var(--whatsapp-green);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn.active { background-color: #d9534f; }
+
+        .status-badge {
+            font-size: 13px;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background-color: #e0e0e0;
+            color: #555;
+        }
+
+        .status-badge.running { background-color: #d4edda; color: #155724; }
+
+        .upload-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            text-align: center;
+            border: 2px dashed #bbb;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-card:hover { border-color: var(--primary-light); background-color: #f9fbfb; }
+        .upload-card input[type="file"] { display: none; }
+
+        .upload-btn {
+            display: inline-block;
+            background-color: var(--primary-light);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-light);
+        }
+
+        .metric-card h3 { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+        .metric-card p { font-size: 22px; font-weight: bold; color: var(--primary); }
+
+        .search-box { margin-bottom: 20px; }
+        .search-box input {
+            width: 100%;
+            padding: 12px 18px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .clients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 20px;
+        }
+
+        .client-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .client-header { border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
+        .client-name { font-size: 17px; font-weight: bold; color: #111; }
+        .client-seller { font-size: 12px; color: #777; margin-top: 2px; }
+
+        .items-list {
+            list-style: none;
+            margin-bottom: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .items-list li {
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .item-name { color: #444; max-width: 65%; word-break: break-word; }
+        .item-val { font-weight: 600; color: #d9534f; }
+
+        .client-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fdf2f2;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .client-total span { font-size: 13px; font-weight: bold; color: #888; }
+        .client-total strong { font-size: 18px; color: #c92a2a; }
+
+        .phone-input-group { margin-bottom: 12px; }
+        .phone-input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+        .phone-input-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn-whatsapp {
+            background-color: var(--whatsapp-green);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-whatsapp:hover { background-color: #1ebc57; }
+
+        .msg-preview {
+            background: #eef7f5;
+            border: 1px solid #c2e5dc;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #2c584c;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #888;
+            padding: 50px 0;
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Cobrança Automática WhatsApp</h1>
+        <span>Leitor de Tabela .DOCX + Firebase DB</span>
+    </header>
+
+    <div class="automation-card">
+        <div class="automation-header">
+            <div class="automation-title">
+                ⏰ Agendamento Automático de Envio
+            </div>
+            <div class="schedule-info">
+                🗓️ Segundas e Sextas-feiras às 09:30h
+            </div>
+        </div>
+        <div class="automation-controls">
+            <button id="toggleAutoBtn" class="toggle-btn" onclick="toggleAutomation()">Ativar Automação</button>
+            <span id="autoStatusBadge" class="status-badge">Status: Inativo</span>
+            <span id="nextRunText" style="font-size: 13px; color: #555;"></span>
+        </div>
+    </div>
+
+    <div class="upload-card" onclick="document.getElementById('fileInput').click()">
+        <h2>Carregar Relatório (.docx)</h2>
+        <p style="color: #666; margin-top: 5px;">Clique aqui para selecionar seu arquivo de contas a receber</p>
+        <span class="upload-btn">Selecionar Arquivo</span>
+        <input type="file" id="fileInput" accept=".docx" onchange="handleFile(this.files[0])">
+    </div>
+
+    <div class="summary-bar" id="summaryBar" style="display: none;">
+        <div class="metric-card">
+            <h3>Total de Clientes</h3>
+            <p id="totalClients">0</p>
+        </div>
+        <div class="metric-card">
+            <h3>Total de Itens/Peças</h3>
+            <p id="totalItems">0</p>
+        </div>
+        <div class="metric-card">
+            <h3>Valor Pendente Total</h3>
+            <p id="totalPending">R$ 0,00</p>
+        </div>
+    </div>
+
+    <div class="search-box" id="searchBox" style="display: none;">
+        <input type="text" id="searchInput" placeholder="Buscar por cliente ou vendedor..." oninput="filterClients()">
+    </div>
+
+    <div class="clients-grid" id="clientsGrid">
+        <div class="empty-state">
+            Nenhum arquivo carregado. Selecione o arquivo .docx acima para listar as cobranças.
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDK (Módulos JS) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Credenciais do Banco de Dados
+    const firebaseConfig = {
+        apiKey: "AIzaSyCIZeZ3VIPiH25x6vr-OJ13becfc3dGeKg",
+        authDomain: "lancamentosaut.firebaseapp.com",
+        projectId: "lancamentosaut",
+        storageBucket: "lancamentosaut.firebasestorage.app",
+        messagingSenderId: "226414592637",
+        appId: "1:226414592637:web:ec6a2d2b1107dfb270a714"
+    };
+
+    // Inicialização do Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Salva os dados lidos do arquivo no Cloud Firestore
+    window.salvarNoFirebase = async function(clientsData) {
+        try {
+            const batchPromises = Object.keys(clientsData).map(clientKey => {
+                const client = clientsData[clientKey];
+                // Cria um ID sanitizado para a coleção 'cobrancas'
+                const docId = clientKey.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+                return setDoc(doc(db, "cobrancas", docId), {
+                    cliente: client.name,
+                    vendedor: client.seller,
+                    itens: client.items,
+                    valorPendente: client.totalPending,
+                    ultimaAtualizacao: new Date().toISOString()
+                }, { merge: true });
+            });
+
+            await Promise.all(batchPromises);
+            console.log("Dados sincronizados com sucesso no Firebase!");
+        } catch (error) {
+            console.error("Erro ao salvar dados no Firebase:", error);
+        }
+    };
+</script>
+
+<script>
+    let clientsData = {};
+    let isAutomationActive = false;
+    let timerCheckInterval = null;
+    let lastDispatchedDate = null;
+
+    function handleFile(file) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const arrayBuffer = event.target.result;
+            mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+                .then(displayResult)
+                .catch(handleError);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function cleanText(str) {
+        if (!str) return '';
+        return str
+            .replace(/<[^>]*>/g, '') 
+            .replace(/\s+/g, ' ')     
+            .trim();
+    }
+
+    function parseCurrency(str) {
+        if (!str) return 0;
+        let cleaned = str.replace(/[^\d,-]/g, '');
+        if (cleaned.includes(',')) {
+            cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+        }
+        return parseFloat(cleaned) || 0;
+    }
+
+    function formatCurrency(val) {
+        return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function displayResult(result) {
+        try {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = result.value;
+
+            const tables = wrapper.getElementsByTagName('table');
+            clientsData = {};
+            let totalItemsCount = 0;
+            let processedAccounts = {};
+
+            if (tables.length > 0) {
+                for (let t = 0; t < tables.length; t++) {
+                    const rows = tables[t].getElementsByTagName('tr');
+                    
+                    for (let r = 0; r < rows.length; r++) {
+                        const cells = rows[r].getElementsByTagName('td');
+                        if (cells.length < 4) continue;
+
+                        let rowTexts = Array.from(cells)
+                            .map(c => cleanText(c.textContent))
+                            .filter(t => t.length > 0);
+
+                        let fullLine = rowTexts.join(' ').toLowerCase();
+
+                        if (fullLine.includes('nº conta') || 
+                            fullLine.includes('valor total:') || 
+                            fullLine.includes('valor pendente:') ||
+                            fullLine.includes('relatório de contas')) {
+                            continue;
+                        }
+
+                        let outroIndex = rowTexts.findIndex(t => t.toUpperCase() === 'OUTRO');
+
+                        if (outroIndex >= 2) {
+                            let accountNum = rowTexts[0];
+                            let clientName = rowTexts[2]; 
+                            let itemName = rowTexts[outroIndex - 1]; 
+                            let seller = rowTexts[rowTexts.length - 1]; 
+
+                            let currencyMatches = rowTexts.filter(t => t.includes('R$'));
+                            let vlPend = 0;
+                            let itemVal = 0;
+
+                            if (currencyMatches.length >= 1) {
+                                itemVal = parseCurrency(currencyMatches[0]);
+                                vlPend = parseCurrency(currencyMatches[currencyMatches.length - 1]);
+                            }
+
+                            if (!clientName || clientName.length < 2 || clientName.toUpperCase().includes('CLIENTE')) {
+                                continue;
+                            }
+
+                            if (!clientsData[clientName]) {
+                                clientsData[clientName] = {
+                                    name: clientName,
+                                    seller: seller,
+                                    items: [],
+                                    totalPending: 0
+                                };
+                            }
+
+                            clientsData[clientName].items.push({ item: itemName, val: itemVal });
+
+                            let accountKey = `${clientName}_${accountNum}`;
+                            if (!processedAccounts[accountKey]) {
+                                clientsData[clientName].totalPending += vlPend;
+                                processedAccounts[accountKey] = true;
+                            }
+
+                            totalItemsCount++;
+                        }
+                    }
+                }
+            }
+
+            // Grava os dados lidos do arquivo diretamente no Firebase
+            if (typeof window.salvarNoFirebase === "function") {
+                window.salvarNoFirebase(clientsData);
+            }
+
+            renderDashboard(totalItemsCount);
+        } catch (err) {
+            handleError(err);
+        }
+    }
+
+    function renderDashboard(totalItemsCount) {
+        const grid = document.getElementById('clientsGrid');
+        grid.innerHTML = '';
+
+        const clientKeys = Object.keys(clientsData);
+        if (clientKeys.length === 0) {
+            grid.innerHTML = '<div class="empty-state">Nenhum dado válido encontrado. Certifique-se de carregar a planilha .docx correta.</div>';
+            return;
+        }
+
+        let overallTotalPending = 0;
+
+        clientKeys.forEach((key, index) => {
+            const client = clientsData[key];
+            overallTotalPending += client.totalPending;
+
+            const card = document.createElement('div');
+            card.className = 'client-card';
+            card.setAttribute('data-name', client.name.toLowerCase());
+            card.setAttribute('data-seller', client.seller.toLowerCase());
+
+            const itemsListHtml = client.items.map(i => `
+                <li>
+                    <span class="item-name">${i.item}</span>
+                    <span class="item-val">${formatCurrency(i.val)}</span>
+                </li>
+            `).join('');
+
+            const msgText = generateMessageText(client);
+
+            card.innerHTML = `
+                <div>
+                    <div class="client-header">
+                        <div class="client-name">${client.name}</div>
+                        <div class="client-seller">Vendedor: ${client.seller || 'N/A'}</div>
+                    </div>
+                    <ul class="items-list">
+                        ${itemsListHtml}
+                    </ul>
+                </div>
+                <div>
+                    <div class="client-total">
+                        <span>VALOR PENDENTE:</span>
+                        <strong>${formatCurrency(client.totalPending)}</strong>
+                    </div>
+                    <div class="phone-input-group">
+                        <label for="phone-${index}">WhatsApp (com DDD):</label>
+                        <input type="text" id="phone-${index}" placeholder="Ex: 42999998888" oninput="updateLink(${index}, '${key}')">
+                    </div>
+                    <div class="msg-preview" id="preview-${index}">${msgText}</div>
+                    <a id="btn-wa-${index}" href="#" target="_blank" class="btn-whatsapp" onclick="return checkPhone(${index})">
+                        Enviar Cobrança
+                    </a>
+                </div>
+            `;
+
+            grid.appendChild(card);
+            updateLink(index, key);
+        });
+
+        document.getElementById('totalClients').innerText = clientKeys.length;
+        document.getElementById('totalItems').innerText = totalItemsCount;
+        document.getElementById('totalPending').innerText = formatCurrency(overallTotalPending);
+        
+        document.getElementById('summaryBar').style.display = 'grid';
+        document.getElementById('searchBox').style.display = 'block';
+    }
+
+    function generateMessageText(client) {
+        let itemsFormatted = client.items.map(i => `• ${i.item}: ${formatCurrency(i.val)}`).join('\n');
+        return `Olá, ${client.name}!\nTudo bem?\n\nConsta em nosso sistema o(s) seguinte(s) item(ns) pendente(s):\n\n${itemsFormatted}\n\n*Total Pendente:* ${formatCurrency(client.totalPending)}\n\nPor favor, entre em contato para alinharmos o pagamento. Obrigado!`;
+    }
+
+    function updateLink(index, clientKey) {
+        const phoneInput = document.getElementById(`phone-${index}`);
+        const btn = document.getElementById(`btn-wa-${index}`);
+        let phone = phoneInput.value.replace(/\D/g, '');
+
+        const client = clientsData[clientKey];
+        const msg = generateMessageText(client);
+        const encodedMsg = encodeURIComponent(msg);
+
+        if (phone) {
+            if (!phone.startsWith('55') && phone.length <= 11) {
+                phone = '55' + phone;
+            }
+            btn.href = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedMsg}`;
+        } else {
+            btn.href = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+        }
+    }
+
+    function checkPhone(index) {
+        const phoneInput = document.getElementById(`phone-${index}`);
+        if (!phoneInput.value.trim()) {
+            return confirm("Nenhum número foi preenchido. Deseja abrir o WhatsApp para escolher o contato manualmente?");
+        }
+        return true;
+    }
+
+    function filterClients() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.client-card');
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const seller = card.getAttribute('data-seller');
+            if (name.includes(query) || seller.includes(query)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function toggleAutomation() {
+        isAutomationActive = !isAutomationActive;
+        const btn = document.getElementById('toggleAutoBtn');
+        const badge = document.getElementById('autoStatusBadge');
+        const nextText = document.getElementById('nextRunText');
+
+        if (isAutomationActive) {
+            btn.innerText = 'Desativar Automação';
+            btn.classList.add('active');
+            badge.innerText = 'Status: Ativo (Monitorando)';
+            badge.classList.add('running');
+            nextText.innerText = '• Aguardando segunda ou sexta às 09:30h para disparar...';
+
+            timerCheckInterval = setInterval(checkScheduleTrigger, 30000);
+            checkScheduleTrigger();
+        } else {
+            btn.innerText = 'Ativar Automação';
+            btn.classList.remove('active');
+            badge.innerText = 'Status: Inativo';
+            badge.classList.remove('running');
+            nextText.innerText = '';
+            clearInterval(timerCheckInterval);
+        }
+    }
+
+    function checkScheduleTrigger() {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const dateKey = now.toDateString();
+
+        const isTargetDay = (dayOfWeek === 1 || dayOfWeek === 5);
+        const isTargetTime = (hours === 9 && minutes === 30);
+
+        if (isTargetDay && isTargetTime && lastDispatchedDate !== dateKey) {
+            lastDispatchedDate = dateKey;
+            triggerAutoDispatch();
+        }
+    }
+
+    function triggerAutoDispatch() {
+        const clientKeys = Object.keys(clientsData);
+
+        if (clientKeys.length === 0) {
+            alert('⏰ Horário do agendamento atingido (09:30h), porém nenhum arquivo .docx foi carregado ainda!');
+            return;
+        }
+
+        alert(`⏰ Horário agendado atingido (09:30h)!\nIniciando abertura dos links de cobrança para ${clientKeys.length} clientes...`);
+
+        clientKeys.forEach((key, index) => {
+            const btn = document.getElementById(`btn-wa-${index}`);
+            if (btn && btn.href && btn.href !== '#') {
+                setTimeout(() => {
+                    window.open(btn.href, '_blank');
+                }, index * 1500);
+            }
+        });
+    }
+
+    function handleError(err) {
+        alert("Erro ao ler o arquivo .docx.");
+        console.error("Detalhes do erro:", err);
+    }
+</script>
+
+</body>
+</html>
