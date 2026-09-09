@@ -290,7 +290,7 @@
 
     <div class="upload-card" onclick="document.getElementById('fileInput').click()">
         <h2>Carregar Relatório (.docx)</h2>
-        <p style="color: #666; margin-top: 5px;">Clique aqui para selecionar seu arquivo de contas a receber</p>
+        <p style="color: #666; margin-top: 5px;">Clique aqui para atualizar a base com um novo arquivo</p>
         <span class="upload-btn">Selecionar Arquivo</span>
         <input type="file" id="fileInput" accept=".docx" onchange="handleFile(this.files[0])">
     </div>
@@ -316,7 +316,7 @@
 
     <div class="clients-grid" id="clientsGrid">
         <div class="empty-state">
-            Nenhum arquivo carregado. Selecione o arquivo .docx acima para listar as cobranças.
+            Buscando cobranças salvas no Firebase...
         </div>
     </div>
 </div>
@@ -324,9 +324,8 @@
 <!-- Firebase SDK (Módulos JS) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Credenciais do Banco de Dados
     const firebaseConfig = {
         apiKey: "AIzaSyCIZeZ3VIPiH25x6vr-OJ13becfc3dGeKg",
         authDomain: "lancamentosaut.firebaseapp.com",
@@ -336,36 +335,82 @@
         appId: "1:226414592637:web:ec6a2d2b1107dfb270a714"
     };
 
-    // Inicialização do Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Salva os dados lidos do arquivo no Cloud Firestore
+    // Salvar dados no Firebase
     window.salvarNoFirebase = async function(clientsData) {
         try {
             const batchPromises = Object.keys(clientsData).map(clientKey => {
                 const client = clientsData[clientKey];
-                // Cria um ID sanitizado para a coleção 'cobrancas'
                 const docId = clientKey.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
                 return setDoc(doc(db, "cobrancas", docId), {
                     cliente: client.name,
                     vendedor: client.seller,
                     itens: client.items,
                     valorPendente: client.totalPending,
+                    phone: client.phone || '',
                     ultimaAtualizacao: new Date().toISOString()
                 }, { merge: true });
             });
 
             await Promise.all(batchPromises);
-            console.log("Dados sincronizados com sucesso no Firebase!");
+            console.log("Dados sincronizados no Firebase com sucesso!");
         } catch (error) {
-            console.error("Erro ao salvar dados no Firebase:", error);
+            console.error("Erro ao salvar no Firebase:", error);
         }
     };
+
+    // Carregar dados salvos no Firebase ao abrir a página
+    window.carregarDoFirebase = async function() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "cobrancas"));
+            if (querySnapshot.empty) {
+                document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Nenhum dado salvo encontrado no Firebase. Carregue um arquivo .docx acima.</div>';
+                return;
+            }
+
+            let firebaseClients = {};
+            let totalItemsCount = 0;
+
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                firebaseClients[data.cliente] = {
+                    name: data.cliente,
+                    seller: data.vendedor,
+                    items: data.itens || [],
+                    totalPending: data.valorPendente || 0,
+                    phone: data.phone || ''
+                };
+                totalItemsCount += (data.itens ? data.itens.length : 0);
+            });
+
+            window.clientsData = firebaseClients;
+            window.renderDashboard(totalItemsCount);
+        } catch (error) {
+            console.error("Erro ao carregar dados do Firebase:", error);
+            document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Nenhum registro no banco de dados. Carregue um arquivo .docx para iniciar.</div>';
+        }
+    };
+
+    // Salvar o telefone digitado pelo usuário
+    window.salvarTelefoneNoFirebase = async function(clientName, phone) {
+        try {
+            const docId = clientName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+            await setDoc(doc(db, "cobrancas", docId), { phone: phone }, { merge: true });
+        } catch (error) {
+            console.error("Erro ao atualizar telefone:", error);
+        }
+    };
+
+    // Executa a busca assim que a página carrega
+    window.addEventListener('DOMContentLoaded', () => {
+        window.carregarDoFirebase();
+    });
 </script>
 
 <script>
-    let clientsData = {};
+    var clientsData = {};
     let isAutomationActive = false;
     let timerCheckInterval = null;
     let lastDispatchedDate = null;
@@ -385,10 +430,7 @@
 
     function cleanText(str) {
         if (!str) return '';
-        return str
-            .replace(/<[^>]*>/g, '') 
-            .replace(/\s+/g, ' ')     
-            .trim();
+        return str.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
     }
 
     function parseCurrency(str) {
@@ -461,7 +503,8 @@
                                     name: clientName,
                                     seller: seller,
                                     items: [],
-                                    totalPending: 0
+                                    totalPending: 0,
+                                    phone: ''
                                 };
                             }
 
@@ -479,7 +522,6 @@
                 }
             }
 
-            // Grava os dados lidos do arquivo diretamente no Firebase
             if (typeof window.salvarNoFirebase === "function") {
                 window.salvarNoFirebase(clientsData);
             }
@@ -519,6 +561,7 @@
             `).join('');
 
             const msgText = generateMessageText(client);
+            const initialPhone = client.phone || '';
 
             card.innerHTML = `
                 <div>
@@ -537,7 +580,7 @@
                     </div>
                     <div class="phone-input-group">
                         <label for="phone-${index}">WhatsApp (com DDD):</label>
-                        <input type="text" id="phone-${index}" placeholder="Ex: 42999998888" oninput="updateLink(${index}, '${key}')">
+                        <input type="text" id="phone-${index}" value="${initialPhone}" placeholder="Ex: 42999998888" oninput="updateLink(${index}, '${key}')">
                     </div>
                     <div class="msg-preview" id="preview-${index}">${msgText}</div>
                     <a id="btn-wa-${index}" href="#" target="_blank" class="btn-whatsapp" onclick="return checkPhone(${index})">
@@ -567,6 +610,13 @@
         const phoneInput = document.getElementById(`phone-${index}`);
         const btn = document.getElementById(`btn-wa-${index}`);
         let phone = phoneInput.value.replace(/\D/g, '');
+
+        if (clientsData[clientKey]) {
+            clientsData[clientKey].phone = phone;
+            if (typeof window.salvarTelefoneNoFirebase === "function") {
+                window.salvarTelefoneNoFirebase(clientKey, phone);
+            }
+        }
 
         const client = clientsData[clientKey];
         const msg = generateMessageText(client);
@@ -650,7 +700,7 @@
         const clientKeys = Object.keys(clientsData);
 
         if (clientKeys.length === 0) {
-            alert('⏰ Horário do agendamento atingido (09:30h), porém nenhum arquivo .docx foi carregado ainda!');
+            alert('⏰ Horário do agendamento atingido (09:30h), porém nenhum registro foi encontrado!');
             return;
         }
 
@@ -667,8 +717,8 @@
     }
 
     function handleError(err) {
-        alert("Erro ao ler o arquivo .docx.");
-        console.error("Detalhes do erro:", err);
+        alert("Erro ao processar arquivo.");
+        console.error("Detalhes:", err);
     }
 </script>
 
