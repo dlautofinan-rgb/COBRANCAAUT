@@ -37,7 +37,7 @@
         header h1 { font-size: 22px; font-weight: 600; }
 
         .automation-card {
-            background: #eef7f5;
+            background: #ffffff;
             border: 2px solid var(--primary-light);
             padding: 20px;
             border-radius: 12px;
@@ -45,7 +45,7 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .automation-header {
@@ -54,6 +54,8 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
         }
 
         .automation-title {
@@ -62,17 +64,65 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 16px;
+            font-size: 18px;
         }
 
-        .schedule-info {
-            background: #ffffff;
-            padding: 8px 15px;
-            border-radius: 20px;
+        .schedule-config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            background: #f9fbfb;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2ece9;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .config-group label {
             font-size: 13px;
             font-weight: 600;
             color: var(--primary);
-            border: 1px solid var(--primary-light);
+        }
+
+        .days-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .day-checkbox {
+            display: none;
+        }
+
+        .day-label {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .day-checkbox:checked + .day-label {
+            background-color: var(--primary-light);
+            color: white;
+            border-color: var(--primary-light);
+        }
+
+        .time-picker, .date-picker, .select-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
         }
 
         .automation-controls {
@@ -80,6 +130,7 @@
             align-items: center;
             gap: 15px;
             flex-wrap: wrap;
+            margin-top: 5px;
         }
 
         .toggle-btn {
@@ -272,15 +323,60 @@
         <span>Leitor de Tabela .DOCX + Realtime Database</span>
     </header>
 
+    <!-- Configuração Dinâmica de Agendamento -->
     <div class="automation-card">
         <div class="automation-header">
             <div class="automation-title">
-                ⏰ Agendamento Automático de Envio
-            </div>
-            <div class="schedule-info">
-                🗓️ Segundas e Sextas-feiras às 09:30h
+                ⏰ Agendamento Personalizado de Envio
             </div>
         </div>
+
+        <div class="schedule-config-grid">
+            <div class="config-group">
+                <label for="scheduleMode">Modo de Agendamento:</label>
+                <select id="scheduleMode" class="select-input" onchange="handleScheduleModeChange()">
+                    <option value="weekly">Dias da Semana</option>
+                    <option value="specific_date">Data Específica</option>
+                </select>
+            </div>
+
+            <div class="config-group" id="weeklyDaysContainer">
+                <label>Dias da Semana:</label>
+                <div class="days-selector">
+                    <input type="checkbox" id="day-1" value="1" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-1" class="day-label">Seg</label>
+
+                    <input type="checkbox" id="day-2" value="2" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-2" class="day-label">Ter</label>
+
+                    <input type="checkbox" id="day-3" value="3" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-3" class="day-label">Qua</label>
+
+                    <input type="checkbox" id="day-4" value="4" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-4" class="day-label">Qui</label>
+
+                    <input type="checkbox" id="day-5" value="5" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-5" class="day-label">Sex</label>
+
+                    <input type="checkbox" id="day-6" value="6" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-6" class="day-label">Sáb</label>
+
+                    <input type="checkbox" id="day-0" value="0" class="day-checkbox" onchange="saveScheduleConfig()">
+                    <label for="day-0" class="day-label">Dom</label>
+                </div>
+            </div>
+
+            <div class="config-group" id="specificDateContainer" style="display: none;">
+                <label for="scheduleDate">Data do Disparo:</label>
+                <input type="date" id="scheduleDate" class="date-picker" onchange="saveScheduleConfig()">
+            </div>
+
+            <div class="config-group">
+                <label for="scheduleTime">Horário do Disparo:</label>
+                <input type="time" id="scheduleTime" class="time-picker" value="09:30" onchange="saveScheduleConfig()">
+            </div>
+        </div>
+
         <div class="automation-controls">
             <button id="toggleAutoBtn" class="toggle-btn" onclick="toggleAutomation()">Ativar Automação</button>
             <span id="autoStatusBadge" class="status-badge">Status: Inativo</span>
@@ -329,7 +425,7 @@
     const firebaseConfig = {
         apiKey: "AIzaSyCIZeZ3VIPiH25x6vr-OJ13becfc3dGeKg",
         authDomain: "lancamentosaut.firebaseapp.com",
-        databaseURL: "https://lancamentosaut-default-rtdb.firebaseio.com", // Adicione o link do Realtime DB do seu console
+        databaseURL: "https://lancamentosaut-default-rtdb.firebaseio.com",
         projectId: "lancamentosaut",
         storageBucket: "lancamentosaut.firebasestorage.app",
         messagingSenderId: "226414592637",
@@ -339,7 +435,39 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Salvar no Realtime Database
+    // Salvar configurações do agendamento
+    window.salvarConfigAgendamentoFirebase = async function(config) {
+        try {
+            await set(ref(db, 'configuracao_agendamento'), config);
+        } catch (error) {
+            console.error("Erro ao salvar configuração do agendamento:", error);
+        }
+    };
+
+    // Carregar configurações do agendamento
+    window.carregarConfigAgendamentoFirebase = async function() {
+        try {
+            const snapshot = await get(ref(db, 'configuracao_agendamento'));
+            if (snapshot.exists()) {
+                const config = snapshot.val();
+                if (config.mode) document.getElementById('scheduleMode').value = config.mode;
+                if (config.time) document.getElementById('scheduleTime').value = config.time;
+                if (config.date) document.getElementById('scheduleDate').value = config.date;
+                
+                if (config.days && Array.isArray(config.days)) {
+                    [0,1,2,3,4,5,6].forEach(d => {
+                        const cb = document.getElementById(`day-${d}`);
+                        if (cb) cb.checked = config.days.includes(String(d));
+                    });
+                }
+                window.handleScheduleModeChange();
+            }
+        } catch (error) {
+            console.error("Erro ao carregar agendamento:", error);
+        }
+    };
+
+    // Salvar clientes no Realtime Database
     window.salvarNoFirebase = async function(clientsData) {
         try {
             const batchPromises = Object.keys(clientsData).map(clientKey => {
@@ -368,27 +496,28 @@
             const snapshot = await get(ref(db, 'cobrancas'));
             if (!snapshot.exists()) {
                 document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Nenhum dado salvo encontrado no Realtime Database. Carregue um arquivo .docx.</div>';
-                return;
+            } else {
+                const data = snapshot.val();
+                let firebaseClients = {};
+                let totalItemsCount = 0;
+
+                Object.keys(data).forEach((key) => {
+                    const item = data[key];
+                    firebaseClients[item.cliente] = {
+                        name: item.cliente,
+                        seller: item.vendedor,
+                        items: item.itens || [],
+                        totalPending: item.valorPendente || 0,
+                        phone: item.phone || ''
+                    };
+                    totalItemsCount += (item.itens ? item.itens.length : 0);
+                });
+
+                window.clientsData = firebaseClients;
+                window.renderDashboard(totalItemsCount);
             }
-
-            const data = snapshot.val();
-            let firebaseClients = {};
-            let totalItemsCount = 0;
-
-            Object.keys(data).forEach((key) => {
-                const item = data[key];
-                firebaseClients[item.cliente] = {
-                    name: item.cliente,
-                    seller: item.vendedor,
-                    items: item.itens || [],
-                    totalPending: item.valorPendente || 0,
-                    phone: item.phone || ''
-                };
-                totalItemsCount += (item.itens ? item.itens.length : 0);
-            });
-
-            window.clientsData = firebaseClients;
-            window.renderDashboard(totalItemsCount);
+            
+            await window.carregarConfigAgendamentoFirebase();
         } catch (error) {
             console.error("Erro ao carregar do Realtime Database:", error);
             document.getElementById('clientsGrid').innerHTML = '<div class="empty-state">Erro ao acessar a base. Verifique as regras de leitura do banco.</div>';
@@ -415,6 +544,48 @@
     let isAutomationActive = false;
     let timerCheckInterval = null;
     let lastDispatchedDate = null;
+
+    function handleScheduleModeChange() {
+        const mode = document.getElementById('scheduleMode').value;
+        const weeklyContainer = document.getElementById('weeklyDaysContainer');
+        const specificContainer = document.getElementById('specificDateContainer');
+
+        if (mode === 'weekly') {
+            weeklyContainer.style.display = 'flex';
+            specificContainer.style.display = 'none';
+        } else {
+            weeklyContainer.style.display = 'none';
+            specificContainer.style.display = 'flex';
+        }
+        saveScheduleConfig();
+    }
+
+    function saveScheduleConfig() {
+        const mode = document.getElementById('scheduleMode').value;
+        const time = document.getElementById('scheduleTime').value;
+        const date = document.getElementById('scheduleDate').value;
+        
+        const selectedDays = [];
+        [0,1,2,3,4,5,6].forEach(d => {
+            const cb = document.getElementById(`day-${d}`);
+            if (cb && cb.checked) selectedDays.push(cb.value);
+        });
+
+        const config = {
+            mode: mode,
+            time: time,
+            date: date,
+            days: selectedDays
+        };
+
+        if (typeof window.salvarConfigAgendamentoFirebase === "function") {
+            window.salvarConfigAgendamentoFirebase(config);
+        }
+
+        if (isAutomationActive) {
+            updateAutomationText();
+        }
+    }
 
     function handleFile(file) {
         if (!file) return;
@@ -660,40 +831,98 @@
         isAutomationActive = !isAutomationActive;
         const btn = document.getElementById('toggleAutoBtn');
         const badge = document.getElementById('autoStatusBadge');
-        const nextText = document.getElementById('nextRunText');
 
         if (isAutomationActive) {
             btn.innerText = 'Desativar Automação';
             btn.classList.add('active');
             badge.innerText = 'Status: Ativo (Monitorando)';
             badge.classList.add('running');
-            nextText.innerText = '• Aguardando segunda ou sexta às 09:30h para disparar...';
 
-            timerCheckInterval = setInterval(checkScheduleTrigger, 30000);
+            updateAutomationText();
+            timerCheckInterval = setInterval(checkScheduleTrigger, 15000);
             checkScheduleTrigger();
         } else {
             btn.innerText = 'Ativar Automação';
             btn.classList.remove('active');
             badge.innerText = 'Status: Inativo';
             badge.classList.remove('running');
-            nextText.innerText = '';
+            document.getElementById('nextRunText').innerText = '';
             clearInterval(timerCheckInterval);
         }
     }
 
+    function updateAutomationText() {
+        const mode = document.getElementById('scheduleMode').value;
+        const time = document.getElementById('scheduleTime').value || '00:00';
+        const nextText = document.getElementById('nextRunText');
+
+        if (mode === 'weekly') {
+            const dayMap = { '0': 'Dom', '1': 'Seg', '2': 'Ter', '3': 'Qua', '4': 'Qui', '5': 'Sex', '6': 'Sáb' };
+            const selectedDays = [];
+            [0,1,2,3,4,5,6].forEach(d => {
+                const cb = document.getElementById(`day-${d}`);
+                if (cb && cb.checked) selectedDays.push(dayMap[d]);
+            });
+
+            if (selectedDays.length === 0) {
+                nextText.innerText = '• Selecione ao menos um dia da semana.';
+            } else {
+                nextText.innerText = `• Agendado para (${selectedDays.join(', ')}) às ${time}h`;
+            }
+        } else {
+            const date = document.getElementById('scheduleDate').value;
+            if (!date) {
+                nextText.innerText = '• Selecione uma data para o disparo.';
+            } else {
+                nextText.innerText = `• Agendado para a data ${date} às ${time}h`;
+            }
+        }
+    }
+
     function checkScheduleTrigger() {
+        if (!isAutomationActive) return;
+
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        const dateKey = now.toDateString();
+        const mode = document.getElementById('scheduleMode').value;
+        const targetTime = document.getElementById('scheduleTime').value;
 
-        const isTargetDay = (dayOfWeek === 1 || dayOfWeek === 5);
-        const isTargetTime = (hours === 9 && minutes === 30);
+        if (!targetTime) return;
 
-        if (isTargetDay && isTargetTime && lastDispatchedDate !== dateKey) {
-            lastDispatchedDate = dateKey;
-            triggerAutoDispatch();
+        const [targetHours, targetMinutes] = targetTime.split(':').map(Number);
+        const currentHours = now.getHours();
+        const currentMinutes = now.getMinutes();
+
+        const isTimeMatch = (currentHours === targetHours && currentMinutes === targetMinutes);
+
+        if (!isTimeMatch) return;
+
+        if (mode === 'weekly') {
+            const currentDayStr = String(now.getDay());
+            const selectedCb = document.getElementById(`day-${currentDayStr}`);
+
+            if (selectedCb && selectedCb.checked) {
+                const dateKey = now.toDateString() + '_' + targetTime;
+                if (lastDispatchedDate !== dateKey) {
+                    lastDispatchedDate = dateKey;
+                    triggerAutoDispatch();
+                }
+            }
+        } else if (mode === 'specific_date') {
+            const targetDateStr = document.getElementById('scheduleDate').value;
+            if (!targetDateStr) return;
+
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const currentDateStr = `${year}-${month}-${day}`;
+
+            if (currentDateStr === targetDateStr) {
+                const dateKey = currentDateStr + '_' + targetTime;
+                if (lastDispatchedDate !== dateKey) {
+                    lastDispatchedDate = dateKey;
+                    triggerAutoDispatch();
+                }
+            }
         }
     }
 
@@ -701,11 +930,11 @@
         const clientKeys = Object.keys(clientsData);
 
         if (clientKeys.length === 0) {
-            alert('⏰ Horário do agendamento atingido (09:30h), porém nenhum registro foi encontrado!');
+            alert('⏰ Horário agendado atingido, porém nenhum cliente cadastrado para envio!');
             return;
         }
 
-        alert(`⏰ Horário agendado atingido (09:30h)!\nIniciando abertura dos links de cobrança para ${clientKeys.length} clientes...`);
+        alert(`⏰ Horário agendado atingido!\nIniciando envio para ${clientKeys.length} clientes...`);
 
         clientKeys.forEach((key, index) => {
             const btn = document.getElementById(`btn-wa-${index}`);
