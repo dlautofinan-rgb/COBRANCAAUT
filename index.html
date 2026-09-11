@@ -37,7 +37,7 @@
         header h1 { font-size: 22px; font-weight: 600; }
 
         .automation-card {
-            background: #ffffff;
+            background: #eef7f5;
             border: 2px solid var(--primary-light);
             padding: 20px;
             border-radius: 12px;
@@ -65,57 +65,14 @@
             font-size: 16px;
         }
 
-        .schedule-config {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            background: #eef7f5;
-            padding: 12px 18px;
-            border-radius: 8px;
-            border: 1px solid #c2e5dc;
-        }
-
-        .schedule-config label {
+        .schedule-info {
+            background: #ffffff;
+            padding: 8px 15px;
+            border-radius: 20px;
             font-size: 13px;
             font-weight: 600;
             color: var(--primary);
-        }
-
-        .days-selector {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .day-checkbox {
-            display: none;
-        }
-
-        .day-label {
-            padding: 5px 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: #fff;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.2s;
-        }
-
-        .day-checkbox:checked + .day-label {
-            background-color: var(--primary-light);
-            color: white;
-            border-color: var(--primary-light);
-        }
-
-        .time-picker {
-            padding: 6px 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 13px;
-            outline: none;
+            border: 1px solid var(--primary-light);
         }
 
         .automation-controls {
@@ -305,6 +262,19 @@
             padding: 50px 0;
             grid-column: 1 / -1;
         }
+
+        .log-box {
+            background: #1e1e1e;
+            color: #00ff66;
+            font-family: monospace;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -318,45 +288,19 @@
     <div class="automation-card">
         <div class="automation-header">
             <div class="automation-title">
-                ⏰ Agendamento Automático de Envio
+                ⏰ Agendamento Automático de Envio (API Local)
+            </div>
+            <div class="schedule-info">
+                🗓️ Segundas e Sextas-feiras às 09:30h
             </div>
         </div>
-
-        <!-- Seletor de Dias e Horário -->
-        <div class="schedule-config">
-            <label>Dias do Envio:</label>
-            <div class="days-selector">
-                <input type="checkbox" id="day-1" value="1" class="day-checkbox" checked onchange="updateScheduleLabel()">
-                <label for="day-1" class="day-label">Seg</label>
-
-                <input type="checkbox" id="day-2" value="2" class="day-checkbox" onchange="updateScheduleLabel()">
-                <label for="day-2" class="day-label">Ter</label>
-
-                <input type="checkbox" id="day-3" value="3" class="day-checkbox" onchange="updateScheduleLabel()">
-                <label for="day-3" class="day-label">Qua</label>
-
-                <input type="checkbox" id="day-4" value="4" class="day-checkbox" onchange="updateScheduleLabel()">
-                <label for="day-4" class="day-label">Qui</label>
-
-                <input type="checkbox" id="day-5" value="5" class="day-checkbox" checked onchange="updateScheduleLabel()">
-                <label for="day-5" class="day-label">Sex</label>
-
-                <input type="checkbox" id="day-6" value="6" class="day-checkbox" onchange="updateScheduleLabel()">
-                <label for="day-6" class="day-label">Sáb</label>
-
-                <input type="checkbox" id="day-0" value="0" class="day-checkbox" onchange="updateScheduleLabel()">
-                <label for="day-0" class="day-label">Dom</label>
-            </div>
-
-            <label for="scheduleTime" style="margin-left: 10px;">Horário:</label>
-            <input type="time" id="scheduleTime" class="time-picker" value="09:30" onchange="updateScheduleLabel()">
-        </div>
-
         <div class="automation-controls">
             <button id="toggleAutoBtn" class="toggle-btn" onclick="toggleAutomation()">Ativar Automação</button>
+            <button class="toggle-btn" style="background-color: var(--primary-light);" onclick="triggerAutoDispatch()">🚀 Disparar Agora via API</button>
             <span id="autoStatusBadge" class="status-badge">Status: Inativo</span>
             <span id="nextRunText" style="font-size: 13px; color: #555;"></span>
         </div>
+        <div id="dispatchLogs" class="log-box">Aguardando execução...</div>
     </div>
 
     <div class="upload-card" onclick="document.getElementById('fileInput').click()">
@@ -518,7 +462,6 @@
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
-    // Leitura original mantida intacta
     function displayResult(result) {
         try {
             const wrapper = document.createElement('div');
@@ -728,74 +671,40 @@
         });
     }
 
-    function getSelectedDays() {
-        const days = [];
-        [0, 1, 2, 3, 4, 5, 6].forEach(d => {
-            const cb = document.getElementById(`day-${d}`);
-            if (cb && cb.checked) days.push(parseInt(cb.value));
-        });
-        return days;
-    }
-
-    function updateScheduleLabel() {
-        if (!isAutomationActive) return;
-
-        const nextText = document.getElementById('nextRunText');
-        const timeVal = document.getElementById('scheduleTime').value;
-        const selectedDays = getSelectedDays();
-
-        const dayNames = { 0: 'Domingos', 1: 'Segundas', 2: 'Terças', 3: 'Quartas', 4: 'Quintas', 5: 'Sextas', 6: 'Sábados' };
-        const formattedDays = selectedDays.map(d => dayNames[d]).join(', ');
-
-        if (selectedDays.length === 0) {
-            nextText.innerText = '• Nenhum dia selecionado para disparo.';
-        } else {
-            nextText.innerText = `• Aguardando ${formattedDays} às ${timeVal}h para disparar...`;
-        }
-    }
-
     function toggleAutomation() {
         isAutomationActive = !isAutomationActive;
         const btn = document.getElementById('toggleAutoBtn');
         const badge = document.getElementById('autoStatusBadge');
+        const nextText = document.getElementById('nextRunText');
 
         if (isAutomationActive) {
             btn.innerText = 'Desativar Automação';
             btn.classList.add('active');
             badge.innerText = 'Status: Ativo (Monitorando)';
             badge.classList.add('running');
+            nextText.innerText = '• Aguardando segunda ou sexta às 09:30h para disparar...';
 
-            updateScheduleLabel();
-
-            timerCheckInterval = setInterval(checkScheduleTrigger, 15000);
+            timerCheckInterval = setInterval(checkScheduleTrigger, 30000);
             checkScheduleTrigger();
         } else {
             btn.innerText = 'Ativar Automação';
             btn.classList.remove('active');
             badge.innerText = 'Status: Inativo';
             badge.classList.remove('running');
-            document.getElementById('nextRunText').innerText = '';
+            nextText.innerText = '';
             clearInterval(timerCheckInterval);
         }
     }
 
     function checkScheduleTrigger() {
-        if (!isAutomationActive) return;
-
         const now = new Date();
-        const currentDay = now.getDay();
-        const currentHours = now.getHours();
-        const currentMinutes = now.getMinutes();
+        const dayOfWeek = now.getDay();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const dateKey = now.toDateString();
 
-        const selectedDays = getSelectedDays();
-        const timeVal = document.getElementById('scheduleTime').value;
-        if (!timeVal) return;
-
-        const [targetHours, targetMinutes] = timeVal.split(':').map(Number);
-
-        const isTargetDay = selectedDays.includes(currentDay);
-        const isTargetTime = (currentHours === targetHours && currentMinutes === targetMinutes);
-        const dateKey = now.toDateString() + '_' + timeVal;
+        const isTargetDay = (dayOfWeek === 1 || dayOfWeek === 5);
+        const isTargetTime = (hours === 9 && minutes === 30);
 
         if (isTargetDay && isTargetTime && lastDispatchedDate !== dateKey) {
             lastDispatchedDate = dateKey;
@@ -803,25 +712,78 @@
         }
     }
 
-    function triggerAutoDispatch() {
+    // =======================================================
+    // INTEGRAÇÃO NATIVA COM A API LOCAL (BAILEYS / NODE.JS)
+    // =======================================================
+
+    function logDispatch(msg) {
+        const logBox = document.getElementById('dispatchLogs');
+        const time = new Date().toLocaleTimeString();
+        logBox.innerHTML += `\n[${time}] ${msg}`;
+        logBox.scrollTop = logBox.scrollHeight;
+        console.log(msg);
+    }
+
+    async function enviarCobrancaParaAPI(client) {
+        try {
+            const msgTexto = generateMessageText(client);
+
+            const resposta = await fetch('http://localhost:3000/api/enviar-cobranca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telefone: client.phone,
+                    mensagem: msgTexto
+                })
+            });
+
+            const resultado = await resposta.json();
+            return resultado.success;
+        } catch (error) {
+            logDispatch(`❌ Erro ao conectar com API para ${client.name}`);
+            return false;
+        }
+    }
+
+    async function triggerAutoDispatch() {
         const clientKeys = Object.keys(clientsData);
 
         if (clientKeys.length === 0) {
-            alert('⏰ Horário agendado atingido, porém nenhum registro foi encontrado!');
+            alert('⏰ Nenhum registro encontrado para disparo!');
             return;
         }
 
-        const timeVal = document.getElementById('scheduleTime').value;
-        alert(`⏰ Horário agendado atingido (${timeVal}h)!\nIniciando abertura dos links de cobrança para ${clientKeys.length} clientes...`);
+        logDispatch(`⏰ Iniciando disparos via API para ${clientKeys.length} clientes...`);
 
-        clientKeys.forEach((key, index) => {
-            const btn = document.getElementById(`btn-wa-${index}`);
-            if (btn && btn.href && btn.href !== '#') {
-                setTimeout(() => {
-                    window.open(btn.href, '_blank');
-                }, index * 1500);
+        let sucessos = 0;
+        let falhas = 0;
+
+        for (const key of clientKeys) {
+            const client = clientsData[key];
+
+            if (client.phone && String(client.phone).trim() !== '') {
+                logDispatch(`Enviando para ${client.name} (${client.phone})...`);
+                
+                const enviado = await enviarCobrancaParaAPI(client);
+                
+                if (enviado) {
+                    sucessos++;
+                    logDispatch(`✅ Enviado com sucesso para ${client.name}`);
+                } else {
+                    falhas++;
+                    logDispatch(`⚠️ Falha ao enviar para ${client.name}`);
+                }
+
+                // Pausa de segurança de 4 segundos
+                await new Promise(resolve => setTimeout(resolve, 4000));
+            } else {
+                logDispatch(`⚠️ Cliente ${client.name} ignorado (sem telefone)`);
+                falhas++;
             }
-        });
+        }
+
+        logDispatch(`\n✅ Processo finalizado! Sucessos: ${sucessos} | Falhas/Sem fone: ${falhas}`);
+        alert(`✅ Disparos concluídos!\n\n• Sucessos: ${sucessos}\n• Falhas/Sem telefone: ${falhas}`);
     }
 
     function handleError(err) {
