@@ -393,8 +393,11 @@
                 </button>
             </div>
             
-            <div class="p-4 border-b border-slate-100 bg-slate-50">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center gap-2">
                 <input type="text" id="searchClientInput" oninput="filterClientList()" placeholder="Filtrar por nome, telefone ou CPF..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                <button onclick="deleteEmptyClients()" title="Apagar registros sem nome gerados automaticamente" class="bg-red-100 hover:bg-red-200 text-red-800 text-xs font-bold px-3 py-2 rounded-lg border border-red-300 whitespace-nowrap transition">
+                    <i class="fa-solid fa-broom"></i> Limpar Vazios
+                </button>
             </div>
 
             <div id="modalClientList" class="p-4 overflow-y-auto flex-1 space-y-2">
@@ -447,16 +450,18 @@
             updateReceipt();
         });
 
-        // Escutar clientes e suas peças pendentes no Firebase
+        // Escutar clientes no Firebase
         function listenToFirebaseClients() {
             clientsRef.on('value', (snapshot) => {
                 const data = snapshot.val() || {};
                 state.clients = data;
                 renderClientDropdown();
                 renderClientModalList();
-                document.getElementById('clientCountBadge').innerText = Object.keys(data).length;
 
-                // Se houver cliente selecionado, recarrega peças dele
+                // Contar apenas clientes com nome válido
+                const validCount = Object.values(data).filter(c => c && c.name && c.name.trim().length > 0).length;
+                document.getElementById('clientCountBadge').innerText = validCount;
+
                 if (state.currentClientKey && data[state.currentClientKey]) {
                     const cli = data[state.currentClientKey];
                     state.items = cli.pendingItems ? Object.values(cli.pendingItems) : [];
@@ -476,15 +481,16 @@
                 const doc = document.getElementById('clientDoc').value.trim();
                 const address = document.getElementById('clientAddress').value.trim();
 
+                // NÃO salva na nuvem se o nome estiver vazio
                 if (!name) return;
 
-                let clientKey = state.currentClientKey;
-                if (!clientKey) {
-                    clientKey = 'cli_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                    state.currentClientKey = clientKey;
+                if (!state.currentClientKey) {
+                    // Criar ID única usando o push do Firebase para não sobrescrever nem virar "Sem nome"
+                    const newRef = clientsRef.push();
+                    state.currentClientKey = newRef.key;
                 }
 
-                clientsRef.child(clientKey).update({
+                clientsRef.child(state.currentClientKey).update({
                     name, phone, doc, address,
                     updatedAt: firebase.database.ServerValue.TIMESTAMP
                 });
@@ -495,14 +501,17 @@
             const select = document.getElementById('selectSavedClient');
             select.innerHTML = '<option value="">-- Selecionar um Cliente Existente --</option>';
 
-            Object.keys(state.clients).sort((a,b) => (state.clients[a].name || '').localeCompare(state.clients[b].name || '')).forEach(key => {
-                const cli = state.clients[key];
-                const count = cli.pendingItems ? Object.keys(cli.pendingItems).length : 0;
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = `${cli.name} ${count > 0 ? ' (' + count + ' peças pendentes)' : ''}`;
-                select.appendChild(option);
-            });
+            Object.keys(state.clients)
+                .filter(key => state.clients[key] && state.clients[key].name && state.clients[key].name.trim() !== '')
+                .sort((a,b) => (state.clients[a].name || '').localeCompare(state.clients[b].name || ''))
+                .forEach(key => {
+                    const cli = state.clients[key];
+                    const count = cli.pendingItems ? Object.keys(cli.pendingItems).length : 0;
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = `${cli.name} ${count > 0 ? ' (' + count + ' peças pendentes)' : ''}`;
+                    select.appendChild(option);
+                });
         }
 
         function loadSelectedClient(key) {
@@ -515,7 +524,6 @@
             document.getElementById('clientDoc').value = cli.doc || '';
             document.getElementById('clientAddress').value = cli.address || '';
 
-            // CARREGA AUTOMATICAMENTE AS PEÇAS PENDENTES DELE
             state.items = cli.pendingItems ? Object.values(cli.pendingItems) : [];
             state.docMode = 'PENDING';
 
@@ -523,7 +531,6 @@
             updateReceipt();
         }
 
-        // ADICIONAR ITEM / PEÇA E SALVAR AUTOMÁTICO NO BANCO
         function addItem(e) {
             e.preventDefault();
             const desc = document.getElementById('itemDescription').value.trim();
@@ -543,7 +550,8 @@
             }
 
             if (!state.currentClientKey) {
-                state.currentClientKey = 'cli_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                const newRef = clientsRef.push();
+                state.currentClientKey = newRef.key;
                 autoSaveClientData();
             }
 
@@ -555,7 +563,6 @@
                 price
             };
 
-            // Salvar peça direto no perfil do cliente no Firebase
             clientsRef.child(`${state.currentClientKey}/pendingItems/${itemId}`).set(newItem);
 
             document.getElementById('itemDescription').value = '';
@@ -680,7 +687,6 @@
             document.getElementById('rTimestamp').innerText = `Emissão via Sistema DL Auto Peças - ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
         }
 
-        // DAR BAIXA E ZERAR PEÇAS AO PAGAR
         function clearClientPendingItems() {
             if (state.currentClientKey && state.docMode === 'PAID') {
                 clientsRef.child(`${state.currentClientKey}/pendingItems`).remove();
@@ -727,7 +733,7 @@
                 msg += `*STATUS:* ✅ QUITADO / CONCLUÍDO\n\n`;
                 msg += `Agradecemos a sua preferência! 🚗🔧`;
 
-                clearClientPendingItems(); // LIMPA PEÇAS PENDENTES DO BANCO DE DADOS
+                clearClientPendingItems();
             } else {
                 msg += `*DL AUTO PEÇAS - EXTRATO DE CREDIÁRIO* 🛠️\n`;
                 msg += `CNPJ: 18.615.637/0001-58\n`;
@@ -762,7 +768,7 @@
             
             html2canvas(receipt, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
                 if (state.docMode === 'PAID') {
-                    clearClientPendingItems(); // LIMPA PEÇAS PENDENTES DO BANCO DE DADOS SE QUITADO
+                    clearClientPendingItems();
                 }
 
                 canvas.toBlob(blob => {
@@ -855,18 +861,20 @@
 
             const filtered = keys.filter(k => {
                 const c = state.clients[k];
+                if (!c) return false;
                 const term = filter.toLowerCase();
-                return (c.name || '').toLowerCase().includes(term) ||
+                return (c.name || 'Sem nome').toLowerCase().includes(term) ||
                        (c.phone || '').toLowerCase().includes(term) ||
                        (c.doc || '').toLowerCase().includes(term);
             });
 
             listContainer.innerHTML = filtered.map(k => {
                 const c = state.clients[k];
-                const pendingCount = c.pendingItems ? Object.keys(c.pendingItems).length : 0;
+                const displayName = (c && c.name && c.name.trim() !== '') ? c.name : 'Sem nome (vazio)';
+                const pendingCount = (c && c.pendingItems) ? Object.keys(c.pendingItems).length : 0;
                 
                 let totalDebito = 0;
-                if (c.pendingItems) {
+                if (c && c.pendingItems) {
                     Object.values(c.pendingItems).forEach(i => totalDebito += (i.qty * i.price));
                 }
 
@@ -874,7 +882,7 @@
                     <div class="p-3 border border-slate-200 rounded-lg flex items-center justify-between hover:bg-slate-50 transition">
                         <div>
                             <p class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                ${c.name || 'Sem nome'}
+                                ${displayName}
                                 ${pendingCount > 0 ? `<span class="bg-red-100 text-red-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-red-300">${pendingCount} peça(s) - R$ ${totalDebito.toFixed(2)}</span>` : '<span class="bg-green-100 text-green-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-green-300">Sem Débitos</span>'}
                             </p>
                             <p class="text-xs text-slate-500">Fone: ${c.phone || '---'} | CPF/CNPJ: ${c.doc || '---'}</p>
@@ -900,6 +908,18 @@
         function deleteClient(key) {
             if (confirm('Deseja excluir este cliente do banco de dados?')) {
                 clientsRef.child(key).remove();
+            }
+        }
+
+        // FUNÇÃO PARA APAGAR TODOS OS REGISTROS "SEM NOME" DE UMA VEZ
+        function deleteEmptyClients() {
+            if (confirm('Deseja excluir todos os registros sem nome que foram gerados automaticamente?')) {
+                Object.keys(state.clients).forEach(key => {
+                    const c = state.clients[key];
+                    if (!c || !c.name || c.name.trim() === '') {
+                        clientsRef.child(key).remove();
+                    }
+                });
             }
         }
 
