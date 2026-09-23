@@ -162,7 +162,6 @@
                 </div>
             </div>
 
-            <!-- OPÇÕES DO CREDIÁRIO & TIPO -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                 <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
                     <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -660,31 +659,6 @@
                 pendingSection.classList.add('hidden');
             } else {
                 totalGeral = state.items.reduce((acc, i) => acc + (i.qty * i.price), 0);
-                
-                // NO MODO PAID: Exibir APENAS as peças selecionadas/recebidas no recibo principal
-                let displayItems = state.items;
-                if (state.docMode === 'PAID') {
-                    if (checkedBoxes.length > 0) {
-                        displayItems = state.items.filter(i => checkedBoxes.includes(i.id));
-                    }
-                }
-
-                if (displayItems.length === 0) {
-                    itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhuma peça selecionada para pagamento --</div>`;
-                } else {
-                    itemsList.innerHTML = displayItems.map(item => {
-                        const subtotal = item.qty * item.price;
-                        const isChecked = checkedBoxes.includes(item.id);
-                        if (isChecked) totalSelecionado += subtotal;
-
-                        return `
-                            <div class="flex justify-between items-start">
-                                <span class="pr-2">${item.qty}x ${item.desc}</span>
-                                <span class="font-bold">R$ ${subtotal.toFixed(2)}</span>
-                            </div>
-                        `;
-                    }).join('');
-                }
             }
 
             const watermark = document.getElementById('watermarkText');
@@ -697,26 +671,45 @@
 
                 const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
                 let valorRecebido = 0;
+                let displayItems = [];
+                let remainingPendingItems = [];
 
-                if (!isNaN(inputPartial) && inputPartial > 0) {
-                    valorRecebido = inputPartial;
-                } else if (checkedBoxes.length > 0) {
+                if (checkedBoxes.length > 0) {
+                    // Apenas as peças marcadas vão para o recibo principal
+                    displayItems = state.items.filter(i => checkedBoxes.includes(i.id));
+                    displayItems.forEach(i => totalSelecionado += (i.qty * i.price));
                     valorRecebido = totalSelecionado;
+                    // O restante vai para peças pendentes
+                    remainingPendingItems = state.items.filter(i => !checkedBoxes.includes(i.id));
+                } else if (!isNaN(inputPartial) && inputPartial > 0) {
+                    valorRecebido = inputPartial;
+                    displayItems = state.items; // Mostra todas no pagamento parcial se nenhuma específica foi marcada
+                    remainingPendingItems = [];
                 } else {
+                    // Se nada foi marcado e nenhum valor parcial foi informado, assume quitação total de todas as peças
+                    displayItems = state.items;
                     valorRecebido = totalGeral;
+                    remainingPendingItems = [];
                 }
 
                 const saldoRestante = Math.max(0, totalGeral - valorRecebido);
 
-                // Determinar quais peças restantes ainda continuam pendentes (não foram marcadas/baixadas)
-                let remainingPendingItems = [];
-                if (checkedBoxes.length > 0) {
-                    remainingPendingItems = state.items.filter(i => !checkedBoxes.includes(i.id));
-                } else if (valorRecebido < totalGeral) {
-                    // Se não marcou caixas mas informou valor parcial menor, todas continuam pendentes no saldo restante
-                    remainingPendingItems = state.items;
+                // Renderiza tabela principal do recibo COM AS PEÇAS EXATAS RECEBIDAS
+                if (displayItems.length === 0) {
+                    itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhuma peça selecionada --</div>`;
+                } else {
+                    itemsList.innerHTML = displayItems.map(item => {
+                        const subtotal = item.qty * item.price;
+                        return `
+                            <div class="flex justify-between items-start">
+                                <span class="pr-2">${item.qty}x ${item.desc}</span>
+                                <span class="font-bold">R$ ${subtotal.toFixed(2)}</span>
+                            </div>
+                        `;
+                    }).join('');
                 }
 
+                // Renderiza seção inferior de peças pendentes restantes se houver saldo restante
                 if (saldoRestante > 0 && remainingPendingItems.length > 0) {
                     pendingSection.classList.remove('hidden');
                     pendingItemsList.innerHTML = remainingPendingItems.map(item => `
@@ -749,6 +742,15 @@
                 title.innerText = "*** CREDIÁRIO / EXTRATO DE DÉBITO ***";
                 payInfoBox.classList.add('hidden');
                 pendingSection.classList.add('hidden');
+
+                if (state.items.length > 0) {
+                    itemsList.innerHTML = state.items.map(item => `
+                        <div class="flex justify-between items-start">
+                            <span class="pr-2">${item.qty}x ${item.desc}</span>
+                            <span class="font-bold">R$ ${(item.qty * item.price).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                }
 
                 document.getElementById('rTotalLabel').innerText = "TOTAL PEÇAS/SERVIÇOS:";
                 document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
@@ -815,10 +817,11 @@
                 } else if (!isNaN(inputPartial) && inputPartial > 0) {
                     valorRecebido = inputPartial;
                     itemsPagos = state.items;
-                    itemsPendentesRestantes = state.items;
+                    itemsPendentesRestantes = [];
                 } else {
                     valorRecebido = total;
                     itemsPagos = state.items;
+                    itemsPendentesRestantes = [];
                 }
 
                 const saldoRestante = Math.max(0, total - valorRecebido);
