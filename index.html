@@ -842,21 +842,25 @@
                     clearClientPendingItems();
                 }
 
-                canvas.toBlob(blob => {
-                    const file = new File([blob], `DL_AutoPecas_${state.docNumber}.png`, { type: 'image/png' });
+                canvas.toBlob(async (blob) => {
+                    const phone = document.getElementById('clientPhone').value.replace(/\D/g, '');
 
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        navigator.share({
-                            files: [file],
-                            title: 'DL Auto Peças',
-                            text: 'Comprovante/Crediário DL Auto Peças'
-                        }).catch(err => console.log(err));
-                    } else {
+                    try {
+                        const item = new ClipboardItem({ 'image/png': blob });
+                        await navigator.clipboard.write([item]);
+                        alert('Imagem copiada com sucesso!\n\nA conversa do WhatsApp vai abrir. Basta pressionar CTRL + V na conversa e enviar.');
+                    } catch (err) {
                         const a = document.createElement('a');
                         a.href = canvas.toDataURL('image/png');
                         a.download = `DL_AutoPecas_${state.docNumber}.png`;
                         a.click();
-                        alert('Imagem baixada com sucesso! Você já pode enviá-la pelo WhatsApp.');
+                        alert('Imagem baixada com sucesso!\n\nA conversa do WhatsApp vai abrir. Anexe a imagem baixada na conversa.');
+                    }
+
+                    if (phone && phone.length >= 10) {
+                        window.open(`https://api.whatsapp.com/send?phone=55${phone}`, '_blank');
+                    } else {
+                        window.open(`https://api.whatsapp.com/send`, '_blank');
                     }
                 });
             });
