@@ -84,7 +84,6 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen pb-12">
 
-    <!-- CABEÇALHO DA APLICAÇÃO -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30 no-print">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
@@ -119,7 +118,6 @@
         </div>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <!-- PAINEL DE FORMULÁRIO (ESQUERDA) -->
@@ -225,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- ADICIONAR PEÇAS -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                 <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
                     <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -270,7 +267,6 @@
 
         </section>
 
-        <!-- VISUALIZAÇÃO DO CUPOM / RECIBO (DIREITA) -->
         <section class="lg:col-span-6 space-y-4">
 
             <!-- BARRA DE AÇÕES -->
@@ -285,13 +281,11 @@
                         <span>Copiar PIX/Baixar</span>
                     </button>
 
-                    <!-- OPÇÃO 1: MENSAGEM EM TEXTO -->
                     <button onclick="sendWhatsAppText()" class="bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
                         <span>Enviar Texto</span>
                     </button>
 
-                    <!-- OPÇÃO 2: MENSAGEM EM FOTO/IMAGEM -->
                     <button onclick="shareAsImage()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-image"></i>
                         <span>Enviar Foto/PNG</span>
@@ -304,7 +298,7 @@
                 </div>
             </div>
 
-            <!-- CONTAINER DO CUPOM -->
+            <!-- CONTAINER DO CUPOM FISCAL / RECIBO DE PAPEL -->
             <div id="receiptContainer" class="receipt-paper rounded-lg p-6 receipt-font text-slate-900 text-sm leading-relaxed border border-amber-200/80 relative overflow-hidden max-w-md mx-auto">
                 
                 <!-- MARCA D'ÁGUA DINÂMICA -->
@@ -348,8 +342,8 @@
 
                 <!-- RESUMO DE VALORES -->
                 <div class="border-t-2 border-dashed border-slate-800 pt-3 space-y-1 text-xs">
-                    <div class="flex justify-between">
-                        <span>TOTAL PEÇAS/SERVIÇOS:</span>
+                    <div class="flex justify-between" id="rTotalRow">
+                        <span id="rTotalLabel">TOTAL PEÇAS/SERVIÇOS:</span>
                         <span id="rTotalAmount" class="font-bold">R$ 0,00</span>
                     </div>
                     <div class="flex justify-between text-emerald-800" id="rPaidRow">
@@ -392,7 +386,6 @@
 
     </main>
 
-    <!-- MODAL DE CLIENTES CADASTRADOS NA NUVEM -->
     <div id="clientModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
             <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
@@ -423,7 +416,6 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT PRINCIPAL DA APLICAÇÃO -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDzqK6rsEJFTTVugE7ICC4nLCUp20pSudk",
@@ -659,24 +651,32 @@
             if (state.items.length === 0) {
                 itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhuma peça pendente --</div>`;
             } else {
-                itemsList.innerHTML = state.items.map(item => {
-                    const subtotal = item.qty * item.price;
-                    totalGeral += subtotal;
-
-                    const isChecked = checkedBoxes.includes(item.id);
-                    if (isChecked) {
-                        totalSelecionado += subtotal;
+                totalGeral = state.items.reduce((acc, i) => acc + (i.qty * i.price), 0);
+                
+                // NO MODO PAID: Exibir APENAS as peças selecionadas/recebidas
+                let displayItems = state.items;
+                if (state.docMode === 'PAID') {
+                    if (checkedBoxes.length > 0) {
+                        displayItems = state.items.filter(i => checkedBoxes.includes(i.id));
                     }
+                }
 
-                    const highlightClass = isChecked ? 'font-bold text-emerald-900 bg-emerald-50/50 px-1 rounded' : '';
+                if (displayItems.length === 0) {
+                    itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhuma peça selecionada para pagamento --</div>`;
+                } else {
+                    itemsList.innerHTML = displayItems.map(item => {
+                        const subtotal = item.qty * item.price;
+                        const isChecked = checkedBoxes.includes(item.id);
+                        if (isChecked) totalSelecionado += subtotal;
 
-                    return `
-                        <div class="flex justify-between items-start ${highlightClass}">
-                            <span class="pr-2">${isChecked ? '✓ ' : ''}${item.qty}x ${item.desc}</span>
-                            <span class="font-bold">R$ ${subtotal.toFixed(2)}</span>
-                        </div>
-                    `;
-                }).join('');
+                        return `
+                            <div class="flex justify-between items-start">
+                                <span class="pr-2">${item.qty}x ${item.desc}</span>
+                                <span class="font-bold">R$ ${subtotal.toFixed(2)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
             }
 
             const watermark = document.getElementById('watermarkText');
@@ -711,7 +711,8 @@
                     title.innerText = "*** COMPROVANTE DE RECEBIMENTO / QUITADO ***";
                 }
 
-                document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
+                document.getElementById('rTotalLabel').innerText = "PEÇAS RECEBIDAS:";
+                document.getElementById('rTotalAmount').innerText = `R$ ${valorRecebido.toFixed(2)}`;
                 document.getElementById('rPaidAmount').innerText = `R$ ${valorRecebido.toFixed(2)}`;
                 document.getElementById('rBalanceAmount').innerText = `R$ ${saldoRestante.toFixed(2)}`;
             } else {
@@ -720,6 +721,7 @@
                 title.innerText = "*** CREDIÁRIO / EXTRATO DE DÉBITO ***";
                 payInfoBox.classList.add('hidden');
 
+                document.getElementById('rTotalLabel').innerText = "TOTAL PEÇAS/SERVIÇOS:";
                 document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
                 document.getElementById('rPaidAmount').innerText = `R$ 0,00`;
                 document.getElementById('rBalanceAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
@@ -735,12 +737,10 @@
                 const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
 
                 if (checkedBoxes.length > 0) {
-                    // Remove apenas as peças marcadas com checkbox
                     checkedBoxes.forEach(itemId => {
                         clientsRef.child(`${state.currentClientKey}/pendingItems/${itemId}`).remove();
                     });
                 } else {
-                    // Se nada foi marcado, remove todas as peças pendentes do cliente
                     clientsRef.child(`${state.currentClientKey}/pendingItems`).remove();
                 }
 
@@ -751,7 +751,7 @@
         function copyPixAndGenerateReceipt() {
             const pixKey = "18.615.637/0001-58";
             navigator.clipboard.writeText(pixKey).then(() => {
-                alert(`Chave PIX (CNPJ: ${pixKey}) copiada!\n\nAs peças selecionadas foram removidas do saldo do cliente.`);
+                alert(`Chave PIX (CNPJ: ${pixKey}) copiada com sucesso!\n\nAs peças selecionadas foram baixadas do cadastro do cliente.`);
                 setDocumentMode('PAID');
                 clearClientPendingItems();
             }).catch(() => {
@@ -776,11 +776,14 @@
                 const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
                 
                 let valorRecebido = total;
+                let itemsPagos = state.items;
+
                 if (!isNaN(inputPartial) && inputPartial > 0) {
                     valorRecebido = inputPartial;
                 } else if (checkedBoxes.length > 0) {
                     valorRecebido = 0;
-                    state.items.filter(i => checkedBoxes.includes(i.id)).forEach(i => valorRecebido += (i.qty * i.price));
+                    itemsPagos = state.items.filter(i => checkedBoxes.includes(i.id));
+                    itemsPagos.forEach(i => valorRecebido += (i.qty * i.price));
                 }
 
                 const saldoRestante = Math.max(0, total - valorRecebido);
@@ -792,13 +795,11 @@
                 msg += `*Data:* ${issueDate}\n`;
                 msg += `*Forma de Pagamento:* ${paymentMethod}\n`;
                 msg += `-----------------------------------\n`;
-                msg += `*PEÇAS DO EXTRATO:*\n`;
-                state.items.forEach(i => {
-                    const foiPaga = checkedBoxes.includes(i.id);
-                    msg += `• ${foiPaga ? '[QUITADA] ' : ''}${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`;
+                msg += `*PEÇAS RECEBIDAS / QUITADAS:*\n`;
+                itemsPagos.forEach(i => {
+                    msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`;
                 });
                 msg += `-----------------------------------\n`;
-                msg += `*TOTAL EXTRATO:* R$ ${total.toFixed(2)}\n`;
                 msg += `*VALOR RECEBIDO:* R$ ${valorRecebido.toFixed(2)}\n`;
                 msg += `*SALDO RESTANTE:* R$ ${saldoRestante.toFixed(2)}\n`;
                 msg += `*STATUS:* ${saldoRestante === 0 ? '✅ QUITADO' : '⚠️ PAGAMENTO PARCIAL'}\n\n`;
