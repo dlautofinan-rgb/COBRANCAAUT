@@ -72,7 +72,7 @@
             top: 55%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-25deg);
-            font-size: 3.5rem;
+            font-size: 3.2rem;
             font-weight: 900;
             opacity: 0.08;
             pointer-events: none;
@@ -197,20 +197,30 @@
                             <i class="fa-solid fa-clock"></i> EM ABERTO (MANTER DÉBITO)
                         </button>
                         <button type="button" id="btnModePaid" onclick="setDocumentMode('PAID')" class="py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-slate-200 text-slate-700 border-slate-300">
-                            <i class="fa-solid fa-circle-check"></i> QUITADO (DAR BAIXA)
+                            <i class="fa-solid fa-circle-check"></i> QUITADO / PAG. PARCIAL
                         </button>
                     </div>
 
-                    <!-- FORMA DE PAGAMENTO SE RECEBIDO -->
-                    <div id="paymentMethodContainer" class="pt-2 border-t border-slate-200 hidden">
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Forma de Pagamento Recebida:</label>
-                        <select id="paymentMethod" onchange="updateReceipt()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
-                            <option value="PIX">PIX</option>
-                            <option value="Cartão de Crédito">Cartão de Crédito</option>
-                            <option value="Cartão de Débito">Cartão de Débito</option>
-                            <option value="Dinheiro">Dinheiro</option>
-                            <option value="Cheque">Cheque</option>
-                        </select>
+                    <!-- FORMA DE PAGAMENTO & VALOR PARCIAL -->
+                    <div id="paymentMethodContainer" class="pt-2 border-t border-slate-200 space-y-3 hidden">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Forma de Pagamento Recebida:</label>
+                            <select id="paymentMethod" onchange="updateReceipt()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+                                <option value="PIX">PIX</option>
+                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200">
+                            <label class="block text-xs font-bold text-emerald-900 mb-1">
+                                Valor Recebido Parcial (R$) <span class="font-normal text-slate-500">(Opcional)</span>
+                            </label>
+                            <input type="number" id="partialPaidAmount" step="0.01" min="0" oninput="updateReceipt()" placeholder="Deixe em branco para quitação total" class="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <p class="text-[11px] text-emerald-700 mt-1">Se o cliente pagou apenas uma parte do saldo em dinheiro, digite o valor acima.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -250,6 +260,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Peças / Serviços Registrados</h3>
+                    <span class="text-[11px] text-slate-500">Marque as caixas para dar baixa em peças específicas</span>
                 </div>
 
                 <div id="itemsContainer" class="divide-y divide-slate-100 max-h-60 overflow-y-auto">
@@ -342,16 +353,16 @@
                         <span id="rTotalAmount" class="font-bold">R$ 0,00</span>
                     </div>
                     <div class="flex justify-between text-emerald-800" id="rPaidRow">
-                        <span>TOTAL QUITADO:</span>
+                        <span>TOTAL RECEBIDO:</span>
                         <span id="rPaidAmount" class="font-bold">R$ 0,00</span>
                     </div>
                     <div class="flex justify-between text-sm font-bold border-t border-slate-400 pt-1 mt-1" id="rBalanceRow">
-                        <span>SALDO EM ABERTO:</span>
+                        <span>SALDO RESTANTE:</span>
                         <span id="rBalanceAmount" class="text-red-700">R$ 0,00</span>
                     </div>
                 </div>
 
-                <!-- CAMPO DE FORMA DE PAGAMENTO SE QUITADO -->
+                <!-- CAMPO DE FORMA DE PAGAMENTO SE QUITADO OU PARCIAL -->
                 <div id="rPaymentInfoBox" class="mt-3 p-2 bg-emerald-50 border border-emerald-300 rounded text-center text-xs text-emerald-900 font-bold hidden">
                     PAGAMENTO RECEBIDO EM: <span id="rPaymentMethodName" class="underline">PIX</span>
                 </div>
@@ -481,11 +492,9 @@
                 const doc = document.getElementById('clientDoc').value.trim();
                 const address = document.getElementById('clientAddress').value.trim();
 
-                // NÃO salva na nuvem se o nome estiver vazio
                 if (!name) return;
 
                 if (!state.currentClientKey) {
-                    // Criar ID única usando o push do Firebase para não sobrescrever nem virar "Sem nome"
                     const newRef = clientsRef.push();
                     state.currentClientKey = newRef.key;
                 }
@@ -585,14 +594,17 @@
             }
 
             container.innerHTML = state.items.map(item => `
-                <div class="py-2 flex items-center justify-between text-xs">
-                    <div class="flex-1 pr-2">
-                        <span class="font-bold text-slate-800">${item.qty}x</span> ${item.desc}
-                        <div class="text-[11px] text-slate-500">R$ ${item.price.toFixed(2)} un. = <strong class="text-slate-700">R$ ${(item.qty * item.price).toFixed(2)}</strong></div>
+                <div class="py-2 flex items-center justify-between text-xs border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="check_${item.id}" value="${item.id}" onchange="updateReceipt()" class="item-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300">
+                        <div>
+                            <span class="font-bold text-slate-800">${item.qty}x</span> ${item.desc}
+                            <div class="text-[11px] text-slate-500">R$ ${item.price.toFixed(2)} un. = <strong class="text-slate-700">R$ ${(item.qty * item.price).toFixed(2)}</strong></div>
+                        </div>
                     </div>
                     <div>
                         <button onclick="removeItem('${item.id}')" title="Excluir peça do cadastro" class="text-red-500 hover:text-red-700 px-2 py-1">
-                            <i class="fa-solid fa-trash-can"></i> Excluir
+                            <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 </div>
@@ -616,7 +628,7 @@
                 btnPaid.className = "py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-emerald-600 text-white border-emerald-700 shadow-sm";
                 btnPending.className = "py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-slate-100 text-slate-700 border-slate-300";
                 statusBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
-                statusBadge.innerText = "QUITADO";
+                statusBadge.innerText = "QUITADO / PARCIAL";
                 payBox.classList.remove('hidden');
             }
 
@@ -640,7 +652,11 @@
             document.getElementById('rIssueDate').innerText = issueDate;
             document.getElementById('rDueDate').innerText = dueDate;
 
-            let total = 0;
+            // Verificar se há itens marcados via Checkbox
+            const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
+            
+            let totalGeral = 0;
+            let totalSelecionado = 0;
             const itemsList = document.getElementById('receiptItemsList');
 
             if (state.items.length === 0) {
@@ -648,10 +664,18 @@
             } else {
                 itemsList.innerHTML = state.items.map(item => {
                     const subtotal = item.qty * item.price;
-                    total += subtotal;
+                    totalGeral += subtotal;
+
+                    const isChecked = checkedBoxes.includes(item.id);
+                    if (isChecked) {
+                        totalSelecionado += subtotal;
+                    }
+
+                    const highlightClass = isChecked ? 'font-bold text-emerald-900 bg-emerald-50/50 px-1 rounded' : '';
+
                     return `
-                        <div class="flex justify-between items-start">
-                            <span class="pr-2">${item.qty}x ${item.desc}</span>
+                        <div class="flex justify-between items-start ${highlightClass}">
+                            <span class="pr-2">${isChecked ? '✓ ' : ''}${item.qty}x ${item.desc}</span>
                             <span class="font-bold">R$ ${subtotal.toFixed(2)}</span>
                         </div>
                     `;
@@ -663,40 +687,74 @@
             const payInfoBox = document.getElementById('rPaymentInfoBox');
 
             if (state.docMode === 'PAID') {
-                watermark.innerText = "RECEBIDO";
-                watermark.className = "watermark text-emerald-800";
-                title.innerText = "*** COMPROVANTE DE RECEBIMENTO / QUITADO ***";
                 payInfoBox.classList.remove('hidden');
                 document.getElementById('rPaymentMethodName').innerText = paymentMethod;
 
-                document.getElementById('rTotalAmount').innerText = `R$ ${total.toFixed(2)}`;
-                document.getElementById('rPaidAmount').innerText = `R$ ${total.toFixed(2)}`;
-                document.getElementById('rBalanceAmount').innerText = `R$ 0,00`;
+                // Verificar se o usuário informou um valor parcial em dinheiro
+                const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
+                let valorRecebido = 0;
+
+                if (!isNaN(inputPartial) && inputPartial > 0) {
+                    valorRecebido = inputPartial;
+                } else if (checkedBoxes.length > 0) {
+                    valorRecebido = totalSelecionado;
+                } else {
+                    valorRecebido = totalGeral;
+                }
+
+                const saldoRestante = Math.max(0, totalGeral - valorRecebido);
+
+                if (saldoRestante > 0 && valorRecebido < totalGeral) {
+                    watermark.innerText = "PAG. PARCIAL";
+                    watermark.className = "watermark text-amber-700";
+                    title.innerText = "*** COMPROVANTE DE PAGAMENTO PARCIAL ***";
+                } else {
+                    watermark.innerText = "RECEBIDO";
+                    watermark.className = "watermark text-emerald-800";
+                    title.innerText = "*** COMPROVANTE DE RECEBIMENTO / QUITADO ***";
+                }
+
+                document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
+                document.getElementById('rPaidAmount').innerText = `R$ ${valorRecebido.toFixed(2)}`;
+                document.getElementById('rBalanceAmount').innerText = `R$ ${saldoRestante.toFixed(2)}`;
             } else {
                 watermark.innerText = "CREDIÁRIO";
                 watermark.className = "watermark text-red-900";
                 title.innerText = "*** CREDIÁRIO / EXTRATO DE DÉBITO ***";
                 payInfoBox.classList.add('hidden');
 
-                document.getElementById('rTotalAmount').innerText = `R$ ${total.toFixed(2)}`;
+                document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
                 document.getElementById('rPaidAmount').innerText = `R$ 0,00`;
-                document.getElementById('rBalanceAmount').innerText = `R$ ${total.toFixed(2)}`;
+                document.getElementById('rBalanceAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
             }
 
             const now = new Date();
             document.getElementById('rTimestamp').innerText = `Emissão via Sistema DL Auto Peças - ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
         }
 
+        // DAR BAIXA APENAS NAS PEÇAS / SALDO QUITADO
         function clearClientPendingItems() {
             if (state.currentClientKey && state.docMode === 'PAID') {
-                clientsRef.child(`${state.currentClientKey}/pendingItems`).remove();
+                const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
+
+                if (checkedBoxes.length > 0) {
+                    // Remove do Firebase somente as peças selecionadas
+                    checkedBoxes.forEach(itemId => {
+                        clientsRef.child(`${state.currentClientKey}/pendingItems/${itemId}`).remove();
+                    });
+                } else {
+                    // Se nenhuma peça foi selecionada via checkbox, realiza a quitação total de todas as peças
+                    clientsRef.child(`${state.currentClientKey}/pendingItems`).remove();
+                }
+
+                document.getElementById('partialPaidAmount').value = '';
             }
         }
 
         function copyPixAndGenerateReceipt() {
             const pixKey = "18.615.637/0001-58";
             navigator.clipboard.writeText(pixKey).then(() => {
-                alert(`Chave PIX (CNPJ: ${pixKey}) copiada!\n\nDocumento alterado para QUITADO. As peças pendentes foram baixadas.`);
+                alert(`Chave PIX (CNPJ: ${pixKey}) copiada!\n\nO documento foi ajustado para recebimento e os itens pagos foram atualizados no saldo do cliente.`);
                 setDocumentMode('PAID');
                 clearClientPendingItems();
             }).catch(() => {
@@ -717,20 +775,36 @@
             let msg = "";
 
             if (state.docMode === 'PAID') {
-                msg += `*DL AUTO PEÇAS - COMPROVANTE DE PAGAMENTO* 📄✅\n`;
+                const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
+                const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
+                
+                let valorRecebido = total;
+                if (!isNaN(inputPartial) && inputPartial > 0) {
+                    valorRecebido = inputPartial;
+                } else if (checkedBoxes.length > 0) {
+                    valorRecebido = 0;
+                    state.items.filter(i => checkedBoxes.includes(i.id)).forEach(i => valorRecebido += (i.qty * i.price));
+                }
+
+                const saldoRestante = Math.max(0, total - valorRecebido);
+
+                msg += `*DL AUTO PEÇAS - ${saldoRestante > 0 ? 'COMPROVANTE DE PAGAMENTO PARCIAL' : 'COMPROVANTE DE PAGAMENTO'}* 📄✅\n`;
                 msg += `CNPJ: 18.615.637/0001-58\n`;
                 msg += `-----------------------------------\n`;
                 msg += `*Cliente:* ${name}\n`;
                 msg += `*Data:* ${issueDate}\n`;
                 msg += `*Forma de Pagamento:* ${paymentMethod}\n`;
                 msg += `-----------------------------------\n`;
-                msg += `*PEÇAS QUITADAS:*\n`;
+                msg += `*PEÇAS DO EXTRATO:*\n`;
                 state.items.forEach(i => {
-                    msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`;
+                    const foiPaga = checkedBoxes.includes(i.id);
+                    msg += `• ${foiPaga ? '[QUITADA] ' : ''}${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`;
                 });
                 msg += `-----------------------------------\n`;
-                msg += `*VALOR TOTAL RECEBIDO:* R$ ${total.toFixed(2)}\n`;
-                msg += `*STATUS:* ✅ QUITADO / CONCLUÍDO\n\n`;
+                msg += `*TOTAL EXTRATO:* R$ ${total.toFixed(2)}\n`;
+                msg += `*VALOR RECEBIDO:* R$ ${valorRecebido.toFixed(2)}\n`;
+                msg += `*SALDO RESTANTE:* R$ ${saldoRestante.toFixed(2)}\n`;
+                msg += `*STATUS:* ${saldoRestante === 0 ? '✅ QUITADO' : '⚠️ PAGAMENTO PARCIAL'}\n\n`;
                 msg += `Agradecemos a sua preferência! 🚗🔧`;
 
                 clearClientPendingItems();
@@ -835,6 +909,7 @@
             document.getElementById('clientPhone').value = '';
             document.getElementById('clientDoc').value = '';
             document.getElementById('clientAddress').value = '';
+            document.getElementById('partialPaidAmount').value = '';
 
             setDocumentMode('PENDING');
             renderItemList();
@@ -911,7 +986,6 @@
             }
         }
 
-        // FUNÇÃO PARA APAGAR TODOS OS REGISTROS "SEM NOME" DE UMA VEZ
         function deleteEmptyClients() {
             if (confirm('Deseja excluir todos os registros sem nome que foram gerados automaticamente?')) {
                 Object.keys(state.clients).forEach(key => {
