@@ -123,7 +123,6 @@
         <!-- PAINEL DE FORMULÁRIO (ESQUERDA) -->
         <section class="lg:col-span-6 space-y-6 no-print">
 
-            <!-- DADOS DO CLIENTE -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                 <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
                     <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -253,7 +252,6 @@
                 </form>
             </div>
 
-            <!-- LISTA DE PEÇAS LANÇADAS PENDENTES DAQUELA PESSOA -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Selecione as peças a baixar:</h3>
@@ -298,7 +296,6 @@
                 </div>
             </div>
 
-            <!-- CONTAINER DO CUPOM FISCAL / RECIBO DE PAPEL -->
             <div id="receiptContainer" class="receipt-paper rounded-lg p-6 receipt-font text-slate-900 text-sm leading-relaxed border border-amber-200/80 relative overflow-hidden max-w-md mx-auto">
                 
                 <!-- MARCA D'ÁGUA DINÂMICA -->
@@ -328,7 +325,7 @@
                     <div class="flex justify-between"><span class="font-bold">VENCIMENTO:</span> <span id="rDueDate" class="font-bold text-red-700">00/00/0000</span></div>
                 </div>
 
-                <!-- TABELA DE PEÇAS / ITENS -->
+                <!-- TABELA DE PEÇAS / ITENS RECEBIDOS -->
                 <div class="mb-4">
                     <div class="text-xs font-bold border-b border-slate-800 pb-1 mb-2 flex justify-between">
                         <span>QTD ITEM / DESCRIÇÃO</span>
@@ -353,6 +350,14 @@
                     <div class="flex justify-between text-sm font-bold border-t border-slate-400 pt-1 mt-1" id="rBalanceRow">
                         <span>SALDO RESTANTE:</span>
                         <span id="rBalanceAmount" class="text-red-700">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <!-- LISTA DE PEÇAS E VALORES PENDENTES (EXIBIDA QUANDO HÁ SALDO RESTANTE) -->
+                <div id="receiptPendingSection" class="mt-4 pt-3 border-t border-dashed border-slate-400 text-xs hidden">
+                    <p class="font-bold uppercase tracking-wider text-red-800 mb-1">--- PEÇAS PENDENTES RESTANTES ---</p>
+                    <div id="receiptPendingItemsList" class="space-y-1 text-[11px] text-slate-700">
+                        <!-- Peças pendentes restantes injetadas aqui -->
                     </div>
                 </div>
 
@@ -647,13 +652,16 @@
             let totalGeral = 0;
             let totalSelecionado = 0;
             const itemsList = document.getElementById('receiptItemsList');
+            const pendingSection = document.getElementById('receiptPendingSection');
+            const pendingItemsList = document.getElementById('receiptPendingItemsList');
 
             if (state.items.length === 0) {
                 itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhuma peça pendente --</div>`;
+                pendingSection.classList.add('hidden');
             } else {
                 totalGeral = state.items.reduce((acc, i) => acc + (i.qty * i.price), 0);
                 
-                // NO MODO PAID: Exibir APENAS as peças selecionadas/recebidas
+                // NO MODO PAID: Exibir APENAS as peças selecionadas/recebidas no recibo principal
                 let displayItems = state.items;
                 if (state.docMode === 'PAID') {
                     if (checkedBoxes.length > 0) {
@@ -690,7 +698,6 @@
                 const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
                 let valorRecebido = 0;
 
-                // Se houver valor digitado no campo parcial, usa ele; senão, usa o total das peças marcadas; senão, total geral
                 if (!isNaN(inputPartial) && inputPartial > 0) {
                     valorRecebido = inputPartial;
                 } else if (checkedBoxes.length > 0) {
@@ -700,6 +707,27 @@
                 }
 
                 const saldoRestante = Math.max(0, totalGeral - valorRecebido);
+
+                // Determinar quais peças restantes ainda continuam pendentes (não foram marcadas/baixadas)
+                let remainingPendingItems = [];
+                if (checkedBoxes.length > 0) {
+                    remainingPendingItems = state.items.filter(i => !checkedBoxes.includes(i.id));
+                } else if (valorRecebido < totalGeral) {
+                    // Se não marcou caixas mas informou valor parcial menor, todas continuam pendentes no saldo restante
+                    remainingPendingItems = state.items;
+                }
+
+                if (saldoRestante > 0 && remainingPendingItems.length > 0) {
+                    pendingSection.classList.remove('hidden');
+                    pendingItemsList.innerHTML = remainingPendingItems.map(item => `
+                        <div class="flex justify-between items-center">
+                            <span>• ${item.qty}x ${item.desc}</span>
+                            <span class="font-bold">R$ ${(item.qty * item.price).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    pendingSection.classList.add('hidden');
+                }
 
                 if (saldoRestante > 0 && valorRecebido < totalGeral) {
                     watermark.innerText = "PAG. PARCIAL";
@@ -720,6 +748,7 @@
                 watermark.className = "watermark text-red-900";
                 title.innerText = "*** CREDIÁRIO / EXTRATO DE DÉBITO ***";
                 payInfoBox.classList.add('hidden');
+                pendingSection.classList.add('hidden');
 
                 document.getElementById('rTotalLabel').innerText = "TOTAL PEÇAS/SERVIÇOS:";
                 document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
@@ -775,15 +804,21 @@
                 const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
                 const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
                 
-                let valorRecebido = total;
-                let itemsPagos = state.items;
+                let valorRecebido = 0;
+                let itemsPagos = [];
+                let itemsPendentesRestantes = [];
 
-                if (!isNaN(inputPartial) && inputPartial > 0) {
-                    valorRecebido = inputPartial;
-                } else if (checkedBoxes.length > 0) {
-                    valorRecebido = 0;
+                if (checkedBoxes.length > 0) {
                     itemsPagos = state.items.filter(i => checkedBoxes.includes(i.id));
                     itemsPagos.forEach(i => valorRecebido += (i.qty * i.price));
+                    itemsPendentesRestantes = state.items.filter(i => !checkedBoxes.includes(i.id));
+                } else if (!isNaN(inputPartial) && inputPartial > 0) {
+                    valorRecebido = inputPartial;
+                    itemsPagos = state.items;
+                    itemsPendentesRestantes = state.items;
+                } else {
+                    valorRecebido = total;
+                    itemsPagos = state.items;
                 }
 
                 const saldoRestante = Math.max(0, total - valorRecebido);
@@ -802,7 +837,15 @@
                 msg += `-----------------------------------\n`;
                 msg += `*VALOR RECEBIDO:* R$ ${valorRecebido.toFixed(2)}\n`;
                 msg += `*SALDO RESTANTE:* R$ ${saldoRestante.toFixed(2)}\n`;
-                msg += `*STATUS:* ${saldoRestante === 0 ? '✅ QUITADO' : '⚠️ PAGAMENTO PARCIAL'}\n\n`;
+
+                if (saldoRestante > 0 && itemsPendentesRestantes.length > 0) {
+                    msg += `\n*PEÇAS PENDENTES RESTANTES EM ABERTO:*\n`;
+                    itemsPendentesRestantes.forEach(i => {
+                        msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`;
+                    });
+                }
+
+                msg += `\n*STATUS:* ${saldoRestante === 0 ? '✅ QUITADO' : '⚠️ PAGAMENTO PARCIAL'}\n\n`;
                 msg += `Agradecemos a sua preferência! 🚗🔧`;
 
                 clearClientPendingItems();
