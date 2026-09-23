@@ -216,10 +216,10 @@
 
                         <div class="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200">
                             <label class="block text-xs font-bold text-emerald-900 mb-1">
-                                Valor Recebido Parcial (R$) <span class="font-normal text-slate-500">(Opcional)</span>
+                                Valor Pago / Abatido (R$) <span class="font-normal text-slate-500">(Opcional)</span>
                             </label>
-                            <input type="number" id="partialPaidAmount" step="0.01" min="0" oninput="updateReceipt()" placeholder="Deixe em branco para quitação total" class="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            <p class="text-[11px] text-emerald-700 mt-1">Se o cliente pagou apenas uma parte do saldo em dinheiro, digite o valor acima.</p>
+                            <input type="number" id="partialPaidAmount" step="0.01" min="0" oninput="updateReceipt()" placeholder="Opcional: digite o valor em dinheiro pago pelo cliente" class="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <p class="text-[11px] text-emerald-700 mt-1">Marque abaixo as peças que estão sendo pagas ou informe o valor acima para recalcular o saldo restante.</p>
                         </div>
                     </div>
                 </div>
@@ -259,8 +259,8 @@
             <!-- LISTA DE PEÇAS LANÇADAS PENDENTES DAQUELA PESSOA -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Peças / Serviços Registrados</h3>
-                    <span class="text-[11px] text-slate-500">Marque as caixas para dar baixa em peças específicas</span>
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Selecione as peças a baixar:</h3>
+                    <span class="text-[11px] text-slate-500">Marque as caixas para dar baixa no valor/peça</span>
                 </div>
 
                 <div id="itemsContainer" class="divide-y divide-slate-100 max-h-60 overflow-y-auto">
@@ -461,7 +461,6 @@
             updateReceipt();
         });
 
-        // Escutar clientes no Firebase
         function listenToFirebaseClients() {
             clientsRef.on('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -469,7 +468,6 @@
                 renderClientDropdown();
                 renderClientModalList();
 
-                // Contar apenas clientes com nome válido
                 const validCount = Object.values(data).filter(c => c && c.name && c.name.trim().length > 0).length;
                 document.getElementById('clientCountBadge').innerText = validCount;
 
@@ -482,7 +480,6 @@
             });
         }
 
-        // SALVAMENTO AUTOMÁTICO DO CLIENTE
         let autoSaveTimer = null;
         function autoSaveClientData() {
             clearTimeout(autoSaveTimer);
@@ -652,7 +649,7 @@
             document.getElementById('rIssueDate').innerText = issueDate;
             document.getElementById('rDueDate').innerText = dueDate;
 
-            // Verificar se há itens marcados via Checkbox
+            // Pega quais peças foram marcadas pelo usuário
             const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
             
             let totalGeral = 0;
@@ -690,10 +687,10 @@
                 payInfoBox.classList.remove('hidden');
                 document.getElementById('rPaymentMethodName').innerText = paymentMethod;
 
-                // Verificar se o usuário informou um valor parcial em dinheiro
                 const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
                 let valorRecebido = 0;
 
+                // Se houver valor digitado no campo parcial, usa ele; senão, usa o total das peças marcadas; senão, total geral
                 if (!isNaN(inputPartial) && inputPartial > 0) {
                     valorRecebido = inputPartial;
                 } else if (checkedBoxes.length > 0) {
@@ -732,18 +729,18 @@
             document.getElementById('rTimestamp').innerText = `Emissão via Sistema DL Auto Peças - ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
         }
 
-        // DAR BAIXA APENAS NAS PEÇAS / SALDO QUITADO
+        // DAR BAIXA NAS PEÇAS SELECIONADAS NO BANCO DE DADOS
         function clearClientPendingItems() {
             if (state.currentClientKey && state.docMode === 'PAID') {
                 const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
 
                 if (checkedBoxes.length > 0) {
-                    // Remove do Firebase somente as peças selecionadas
+                    // Remove apenas as peças marcadas com checkbox
                     checkedBoxes.forEach(itemId => {
                         clientsRef.child(`${state.currentClientKey}/pendingItems/${itemId}`).remove();
                     });
                 } else {
-                    // Se nenhuma peça foi selecionada via checkbox, realiza a quitação total de todas as peças
+                    // Se nada foi marcado, remove todas as peças pendentes do cliente
                     clientsRef.child(`${state.currentClientKey}/pendingItems`).remove();
                 }
 
@@ -754,7 +751,7 @@
         function copyPixAndGenerateReceipt() {
             const pixKey = "18.615.637/0001-58";
             navigator.clipboard.writeText(pixKey).then(() => {
-                alert(`Chave PIX (CNPJ: ${pixKey}) copiada!\n\nO documento foi ajustado para recebimento e os itens pagos foram atualizados no saldo do cliente.`);
+                alert(`Chave PIX (CNPJ: ${pixKey}) copiada!\n\nAs peças selecionadas foram removidas do saldo do cliente.`);
                 setDocumentMode('PAID');
                 clearClientPendingItems();
             }).catch(() => {
