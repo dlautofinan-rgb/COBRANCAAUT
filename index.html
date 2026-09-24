@@ -301,6 +301,26 @@
                     </form>
                 </div>
 
+                <!-- PAINEL DE DESCONTO DO ORÇAMENTO -->
+                <div class="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-5">
+                    <h3 class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-tag"></i> Desconto Aplicado ao Orçamento
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Tipo de Desconto</label>
+                            <select id="budgetDiscountType" onchange="updateReceipt()" class="w-full bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="reais">Em Reais (R$)</option>
+                                <option value="porcentagem">Percentual (%)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Valor do Desconto</label>
+                            <input type="number" id="budgetDiscountValue" min="0" step="0.01" value="0" oninput="updateReceipt()" placeholder="0,00" class="w-full bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                     <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Itens do Orçamento Atual:</h3>
                     <div id="budgetItemsContainer" class="divide-y divide-slate-100 max-h-60 overflow-y-auto"></div>
@@ -398,6 +418,15 @@
                         <span id="labelTotalTitle">TOTAL PEÇAS/SERVIÇOS:</span>
                         <span id="rTotalAmount" class="font-bold">R$ 0,00</span>
                     </div>
+                    <div class="flex justify-between text-blue-700 hidden" id="rDiscountRow">
+                        <span id="rDiscountLabel">DESCONTO APLICADO:</span>
+                        <span id="rDiscountAmount" class="font-bold">- R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-bold border-t border-slate-400 pt-1 mt-1 hidden" id="rFinalBudgetRow">
+                        <span>TOTAL COM DESCONTO:</span>
+                        <span id="rFinalBudgetAmount" class="text-blue-900">R$ 0,00</span>
+                    </div>
+
                     <div class="flex justify-between text-emerald-800 hidden" id="rPaidRow">
                         <span id="labelPaidTitle">TOTAL RECEBIDO:</span>
                         <span id="rPaidAmount" class="font-bold">R$ 0,00</span>
@@ -780,6 +809,8 @@
             const payInfoBox = document.getElementById('rPaymentInfoBox');
             const rPaidRow = document.getElementById('rPaidRow');
             const rBalanceRow = document.getElementById('rBalanceRow');
+            const rDiscountRow = document.getElementById('rDiscountRow');
+            const rFinalBudgetRow = document.getElementById('rFinalBudgetRow');
             const remainingSection = document.getElementById('remainingPendingSection');
             const pixSection = document.getElementById('pixContainerSection');
             const rowDueDate = document.getElementById('rowDueDateContainer');
@@ -821,8 +852,37 @@
                         `;
                     }).join('');
                 }
-                document.getElementById('labelTotalTitle').innerText = "TOTAL DO ORÇAMENTO:";
+
+                // Cálculo do Desconto do Orçamento
+                const discType = document.getElementById('budgetDiscountType').value;
+                const discInputVal = parseFloat(document.getElementById('budgetDiscountValue').value) || 0;
+                let valorDescontoCalculado = 0;
+
+                if (discInputVal > 0) {
+                    if (discType === 'porcentagem') {
+                        valorDescontoCalculado = (totalOrc * discInputVal) / 100;
+                        document.getElementById('rDiscountLabel').innerText = `DESCONTO (${discInputVal}%):`;
+                    } else {
+                        valorDescontoCalculado = Math.min(totalOrc, discInputVal);
+                        document.getElementById('rDiscountLabel').innerText = `DESCONTO (R$):`;
+                    }
+                }
+
+                const totalFinalOrc = Math.max(0, totalOrc - valorDescontoCalculado);
+
+                document.getElementById('labelTotalTitle').innerText = "SUBTOTAL ORÇAMENTO:";
                 document.getElementById('rTotalAmount').innerText = `R$ ${totalOrc.toFixed(2)}`;
+
+                if (valorDescontoCalculado > 0) {
+                    rDiscountRow.classList.remove('hidden');
+                    rFinalBudgetRow.classList.remove('hidden');
+                    document.getElementById('rDiscountAmount').innerText = `- R$ ${valorDescontoCalculado.toFixed(2)}`;
+                    document.getElementById('rFinalBudgetAmount').innerText = `R$ ${totalFinalOrc.toFixed(2)}`;
+                } else {
+                    rDiscountRow.classList.add('hidden');
+                    rFinalBudgetRow.classList.add('hidden');
+                }
+
                 document.getElementById('receiptFooterMsg').innerText = "Orçamento válido por 7 dias.";
 
                 const now = new Date();
@@ -841,6 +901,8 @@
             document.getElementById('rDueDate').innerText = dueDate;
             rowDueDate.classList.remove('hidden');
             document.getElementById('receiptFooterMsg').innerText = "Agradecemos a preferência!";
+            rDiscountRow.classList.add('hidden');
+            rFinalBudgetRow.classList.add('hidden');
 
             const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
             
@@ -1062,8 +1124,21 @@
 
         function sendBudgetWhatsApp() {
             const name = document.getElementById('clientName').value.trim() || 'Cliente';
-            let total = 0;
-            state.budgetItems.forEach(i => total += (i.qty * i.price));
+            let totalOrc = 0;
+            state.budgetItems.forEach(i => totalOrc += (i.qty * i.price));
+
+            const discType = document.getElementById('budgetDiscountType').value;
+            const discInputVal = parseFloat(document.getElementById('budgetDiscountValue').value) || 0;
+            let valorDescontoCalculado = 0;
+
+            if (discInputVal > 0) {
+                if (discType === 'porcentagem') {
+                    valorDescontoCalculado = (totalOrc * discInputVal) / 100;
+                } else {
+                    valorDescontoCalculado = Math.min(totalOrc, discInputVal);
+                }
+            }
+            const totalFinalOrc = Math.max(0, totalOrc - valorDescontoCalculado);
 
             let msg = `*DL AUTO PEÇAS - ORÇAMENTO* 📋🚗\n`;
             msg += `CNPJ: 18.615.637/0001-58\n`;
@@ -1078,8 +1153,14 @@
                 state.budgetItems.forEach(i => msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`);
             }
             msg += `-----------------------------------\n`;
-            msg += `*TOTAL DO ORÇAMENTO:* R$ ${total.toFixed(2)}\n\n`;
-            msg += `Orçamento válido por 7 dias. Estamos à disposição!`;
+            msg += `*SUBTOTAL:* R$ ${totalOrc.toFixed(2)}\n`;
+            if (valorDescontoCalculado > 0) {
+                msg += `*DESCONTO:* - R$ ${valorDescontoCalculado.toFixed(2)} ${discType === 'porcentagem' ? '(' + discInputVal + '%)' : ''}\n`;
+                msg += `*TOTAL COM DESCONTO:* R$ ${totalFinalOrc.toFixed(2)}\n`;
+            } else {
+                msg += `*TOTAL DO ORÇAMENTO:* R$ ${totalOrc.toFixed(2)}\n`;
+            }
+            msg += `\nOrçamento válido por 7 dias. Estamos à disposição!`;
 
             const phone = document.getElementById('clientPhone').value.replace(/\D/g, '');
             const encoded = encodeURIComponent(msg);
@@ -1185,6 +1266,7 @@
             document.getElementById('clientDoc').value = '';
             document.getElementById('clientAddress').value = '';
             document.getElementById('partialPaidAmount').value = '';
+            document.getElementById('budgetDiscountValue').value = '0';
 
             setDocumentMode('PENDING');
             renderItemList();
