@@ -1039,15 +1039,24 @@
                 margin:       10,
                 filename:     `DL_AutoPecas_${prefix}_${docId}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: element.scrollWidth },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().from(element).set(opt).save().then(() => {
-                if (state.activeTab === 'crediario' && state.docMode === 'PAID') {
-                    clearClientPendingItems();
-                }
-            });
+            // Pequeno atraso para garantir renderização correta antes da captura do PDF
+            setTimeout(() => {
+                html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    const { jsPDF } = window.jspdf;
+                    
+                    // Fallback nativo do html2pdf.js com segurança de DOM
+                    html2pdf().from(element).set(opt).save().then(() => {
+                        if (state.activeTab === 'crediario' && state.docMode === 'PAID') {
+                            clearClientPendingItems();
+                        }
+                    });
+                });
+            }, 100);
         }
 
         function sendWhatsAppText() {
