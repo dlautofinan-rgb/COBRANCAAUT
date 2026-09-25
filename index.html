@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DL Auto Peças - Emissor Geral, CT-e, Orçamentos e Firebase</title>
+  <title>DL Auto Peças - Sistema de Gestão Multi-Telas</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -33,7 +33,7 @@
       padding: 20px;
     }
 
-    .app-container { max-width: 1400px; margin: 0 auto; }
+    .app-container { max-width: 1450px; margin: 0 auto; }
 
     header {
       display: flex;
@@ -42,7 +42,7 @@
       background: rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 20px 28px;
+      padding: 18px 24px;
       border-radius: 16px;
       margin-bottom: 20px;
       color: white;
@@ -61,6 +61,46 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      margin-right: 10px;
+    }
+
+    /* NAVEGAÇÃO PRINCIPAL DAS TELAS */
+    .nav-screens {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .screen-tab-btn {
+      flex: 1;
+      padding: 12px 16px;
+      background: transparent;
+      color: #94a3b8;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .screen-tab-btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .screen-tab-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.05);
+      color: #f1f5f9;
     }
 
     .kpi-grid {
@@ -80,31 +120,6 @@
 
     .kpi-card span { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
     .kpi-card .val { font-size: 1.3rem; font-weight: 700; margin-top: 6px; }
-
-    .tabs-container {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .tab-btn {
-      padding: 10px 18px;
-      background: rgba(255, 255, 255, 0.08);
-      color: #94a3b8;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .tab-btn.active, .tab-btn:hover {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
 
     .main-grid {
       display: grid;
@@ -165,6 +180,9 @@
 
     .preview-stamp-box strong { font-size: 0.8rem; display: block; }
     .preview-stamp-box span { font-size: 0.72rem; }
+
+    .screen-content { display: none; }
+    .screen-content.active { display: block; }
 
     /* FORMATO DE IMPRESSÃO */
     #printable-area {
@@ -261,7 +279,7 @@
   <div class="app-container">
     <header>
       <div>
-        <h1><i class="fa-solid fa-calculator" style="color: #60a5fa;"></i> DL Auto Peças - Módulo Integrado</h1>
+        <h1><i class="fa-solid fa-store" style="color: #60a5fa;"></i> DL Auto Peças - Sistema de Gestão</h1>
         <div class="subtitle">DANIELLE APARECIDA BATISTA LOURENÇO | CNPJ: 18.615.637/0001-58</div>
       </div>
       <div>
@@ -270,15 +288,24 @@
       </div>
     </header>
 
-    <!-- KPIs -->
+    <!-- BARRA DE NAVEGAÇÃO POR TELA -->
+    <nav class="nav-screens">
+      <button class="screen-tab-btn active" onclick="switchScreen('screen-cupons', this)">
+        <i class="fa-solid fa-receipt"></i> Tela 1: Cupons & Garantias
+      </button>
+      <button class="screen-tab-btn" onclick="switchScreen('screen-cte', this)">
+        <i class="fa-solid fa-truck-fast"></i> Tela 2: Emissor de CT-e
+      </button>
+      <button class="screen-tab-btn" onclick="switchScreen('screen-orcamentos', this)">
+        <i class="fa-solid fa-calculator"></i> Tela 3: Orçamentos
+      </button>
+    </nav>
+
+    <!-- KPIs GERAIS -->
     <section class="kpi-grid">
       <div class="kpi-card" style="border-left: 4px solid var(--accent);">
         <span>Garantias Ativas</span>
         <div class="val" id="kpi-garantias">0</div>
-      </div>
-      <div class="kpi-card" style="border-left: 4px solid var(--teal);">
-        <span>Orçamentos (R$)</span>
-        <div class="val" id="kpi-orcamentos" style="color: var(--teal);">R$ 0,00</div>
       </div>
       <div class="kpi-card" style="border-left: 4px solid var(--danger);">
         <span>Total Estornos</span>
@@ -289,153 +316,284 @@
         <div class="val" id="kpi-creditos" style="color: var(--purple);">R$ 0,00</div>
       </div>
       <div class="kpi-card" style="border-left: 4px solid var(--orange);">
-        <span>Fretes CT-e</span>
+        <span>Total Fretes CT-e</span>
         <div class="val" id="kpi-cte" style="color: var(--orange);">R$ 0,00</div>
+      </div>
+      <div class="kpi-card" style="border-left: 4px solid var(--teal);">
+        <span>Total Orçamentos</span>
+        <div class="val" id="kpi-orcamentos" style="color: var(--teal);">R$ 0,00</div>
       </div>
     </section>
 
-    <!-- Filtros -->
-    <div class="tabs-container">
-      <button class="tab-btn active" onclick="filterType('Todos', this)">Todos</button>
-      <button class="tab-btn" onclick="filterType('Orçamento', this)">Orçamentos</button>
-      <button class="tab-btn" onclick="filterType('Garantia', this)">Garantia (3 Meses)</button>
-      <button class="tab-btn" onclick="filterType('Estorno', this)">Estorno (Devolução)</button>
-      <button class="tab-btn" onclick="filterType('Vale-Crédito', this)">Vale-Crédito</button>
-      <button class="tab-btn" onclick="filterType('CT-e', this)">CT-e (Transporte)</button>
+    <!-- ==================== TELA 1: CUPONS & GARANTIAS ==================== -->
+    <div id="screen-cupons" class="screen-content active">
+      <main class="main-grid">
+        <section class="card">
+          <h2><i class="fa-solid fa-shield-halved" style="color: var(--accent);"></i> Emissão de Cupons e Garantias</h2>
+          <form id="form-cupons">
+            <div class="form-group">
+              <label>Tipo de Documento</label>
+              <select id="c_tipo_doc" onchange="toggleFormCupons()" style="font-weight:700;">
+                <option value="Garantia">Cupom de Garantia (3 Meses)</option>
+                <option value="Estorno">Solicitação / Cupom de Estorno</option>
+                <option value="Vale-Crédito">Cupom de Vale-Crédito</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nº Nota Fiscal / Pedido</label>
+                <input type="text" id="c_nf" required placeholder="Ex: 8842">
+              </div>
+              <div class="form-group">
+                <label>Data de Emissão</label>
+                <input type="date" id="c_data_emissao" required onchange="calcValidadeCupons()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Cliente / Razão Social</label>
+              <input type="text" id="c_cliente" required placeholder="Nome do Cliente">
+            </div>
+
+            <div class="form-group">
+              <label>WhatsApp / Telefone</label>
+              <input type="text" id="c_telefone" required placeholder="Ex: 11999999999">
+            </div>
+
+            <div class="form-group" id="c_grp_produto">
+              <label>Descrição da Peça (Mecânica / Elétrica)</label>
+              <input type="text" id="c_produto" required placeholder="Ex: Alternador / Kit de Embreagem">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor (R$)</label>
+                <input type="number" step="0.01" id="c_valor" required placeholder="0.00">
+              </div>
+              <div class="form-group" id="c_grp_validade">
+                <label>Validade Garantia (3 Meses)</label>
+                <input type="text" id="c_validade_exibicao" readonly style="background:#e2e8f0; font-weight:bold;" placeholder="DD/MM/AAAA">
+                <input type="hidden" id="c_validade">
+              </div>
+            </div>
+
+            <div class="form-group" id="c_grp_pix" style="display:none;">
+              <label>Chave PIX do Cliente (Para Estorno)</label>
+              <input type="text" id="c_pix" placeholder="Chave PIX para devolução">
+            </div>
+
+            <div class="form-group">
+              <label>Emitente Fixado (Empresa):</label>
+              <div class="preview-stamp-box">
+                <i class="fa-solid fa-stamp" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
+                <strong>DANIELLE APARECIDA BATISTA LOURENÇO</strong>
+                <span>CNPJ: 18.615.637/0001-58</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar Cupom & Imprimir</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2><i class="fa-solid fa-list-check" style="color: var(--accent);"></i> Registros da Tela 1</h2>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código/NF</th>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                  <th>Validade/Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tb-cupons"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <main class="main-grid">
-      <!-- Formulário -->
-      <section class="card">
-        <h2><i class="fa-solid fa-receipt" style="color: var(--accent);"></i> Gerar Documento</h2>
-        <form id="cupom-form">
-          <div class="form-group">
-            <label>Tipo de Documento</label>
-            <select id="tipo_doc" onchange="toggleFormFields()" style="font-weight:700;">
-              <option value="Garantia">Cupom de Garantia (3 Meses)</option>
-              <option value="Orçamento">Orçamento de Peças / Serviços</option>
-              <option value="Estorno">Solicitação / Cupom de Estorno</option>
-              <option value="Vale-Crédito">Cupom de Vale-Crédito</option>
-              <option value="CT-e">CT-e (Conhecimento de Transporte)</option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label id="label-nf">Nº Nota Fiscal / Pedido</label>
-              <input type="text" id="nf" required placeholder="Ex: 8842">
+    <!-- ==================== TELA 2: EMISSOR DE CT-E ==================== -->
+    <div id="screen-cte" class="screen-content">
+      <main class="main-grid">
+        <section class="card">
+          <h2><i class="fa-solid fa-truck-fast" style="color: var(--orange);"></i> Emissão de CT-e (Transporte)</h2>
+          <form id="form-cte">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nº Minuta / CT-e</label>
+                <input type="text" id="cte_nf" required placeholder="Ex: CT-5021">
+              </div>
+              <div class="form-group">
+                <label>Data de Emissão</label>
+                <input type="date" id="cte_data_emissao" required>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Data de Emissão</label>
-              <input type="date" id="data_emissao" required onchange="calcularValidade()">
-            </div>
-          </div>
 
-          <div class="form-group" id="group-cliente">
-            <label>Cliente / Razão Social</label>
-            <input type="text" id="cliente" required placeholder="Nome do Cliente">
-          </div>
-
-          <div class="form-group" id="group-telefone">
-            <label>WhatsApp / Telefone</label>
-            <input type="text" id="telefone" placeholder="Ex: 11999999999">
-          </div>
-
-          <!-- Campos do CT-e -->
-          <div id="group-cte-fields" style="display:none;">
             <div class="form-group">
               <label>Remetente (Origem da Carga)</label>
-              <input type="text" id="cte_remetente" placeholder="Razão Social / CNPJ Remetente">
+              <input type="text" id="cte_remetente" required placeholder="Razão Social / CNPJ Remetente">
             </div>
+
             <div class="form-group">
               <label>Destinatário (Entrega)</label>
-              <input type="text" id="cte_destinatario" placeholder="Razão Social / CNPJ Destinatário">
+              <input type="text" id="cte_destinatario" required placeholder="Razão Social / CNPJ Destinatário">
             </div>
+
             <div class="form-row">
-              <label style="grid-column: 1 / -1; font-size: 0.78rem; font-weight: 700; color: #475569;">Trajeto (Origem - Destino)</label>
-              <input type="text" id="cte_origem" placeholder="Cidade-UF Origem">
-              <input type="text" id="cte_destino" placeholder="Cidade-UF Destino">
+              <div class="form-group">
+                <label>Cidade Origem (UF)</label>
+                <input type="text" id="cte_origem" required placeholder="Ex: Curitiba-PR">
+              </div>
+              <div class="form-group">
+                <label>Cidade Destino (UF)</label>
+                <input type="text" id="cte_destino" required placeholder="Ex: Castro-PR">
+              </div>
             </div>
-            <div class="form-row" style="margin-top: 10px;">
+
+            <div class="form-row">
               <div class="form-group">
                 <label>RNTRC / Placa</label>
-                <input type="text" id="cte_rntrc" placeholder="RNTRC do Veículo">
+                <input type="text" id="cte_rntrc" required placeholder="Ex: 01234567 / ABC-1234">
               </div>
               <div class="form-group">
                 <label>CFOP</label>
-                <input type="text" id="cte_cfop" placeholder="Ex: 5353">
+                <input type="text" id="cte_cfop" required placeholder="Ex: 5353">
               </div>
             </div>
+
             <div class="form-group">
               <label>Chave de Acesso CT-e (44 dígitos)</label>
-              <input type="text" id="cte_chave" placeholder="352609186156370001585700100000...">
+              <input type="text" id="cte_chave" required placeholder="352609186156370001585700100000...">
             </div>
-          </div>
 
-          <!-- Peça / Produto -->
-          <div class="form-group" id="group-produto">
-            <label id="label-produto">Descrição da Peça / Serviço</label>
-            <input type="text" id="produto" required placeholder="Ex: Alternador / Kit de Embreagem">
-          </div>
-
-          <div class="form-row">
             <div class="form-group">
-              <label id="label-valor">Valor (R$)</label>
-              <input type="number" step="0.01" id="valor" required placeholder="0.00">
+              <label>Carga / Produto Transportado</label>
+              <input type="text" id="cte_produto" required placeholder="Ex: Caixa de Direção / Peças Auto">
             </div>
-            <div class="form-group" id="group-validade">
-              <label id="label-validade-txt">Validade Garantia (3 Meses)</label>
-              <input type="text" id="data_validade_exibicao" readonly style="background:#e2e8f0; font-weight:bold;" placeholder="DD/MM/AAAA">
-              <input type="hidden" id="data_validade">
+
+            <div class="form-group">
+              <label>Valor do Frete (R$)</label>
+              <input type="number" step="0.01" id="cte_valor" required placeholder="0.00">
             </div>
-          </div>
 
-          <div class="form-group" id="group-pix" style="display:none;">
-            <label>Chave PIX do Cliente (Para Estorno)</label>
-            <input type="text" id="pix" placeholder="Chave PIX para devolução">
-          </div>
-
-          <!-- Carimbo Fixado -->
-          <div class="form-group">
-            <label>Emitente Fixado (Empresa):</label>
-            <div class="preview-stamp-box">
-              <i class="fa-solid fa-stamp" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
-              <strong>DANIELLE APARECIDA BATISTA LOURENÇO</strong>
-              <span>CNPJ: 18.615.637/0001-58</span>
+            <div class="form-group">
+              <label>Transportador Emitente Fixado:</label>
+              <div class="preview-stamp-box">
+                <i class="fa-solid fa-truck-moving" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
+                <strong>DANIELLE APARECIDA BATISTA LOURENÇO</strong>
+                <span>CNPJ: 18.615.637/0001-58</span>
+              </div>
             </div>
+
+            <button type="submit" class="btn btn-primary" style="background: var(--orange);"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar CT-e & Imprimir DACTE</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2><i class="fa-solid fa-boxes-packing" style="color: var(--orange);"></i> Histórico de Fretes / CT-e</h2>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código/CT-e</th>
+                  <th>Remetente ➔ Destinatário</th>
+                  <th>Rota</th>
+                  <th>Carga</th>
+                  <th>Frete (R$)</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tb-cte"></tbody>
+            </table>
           </div>
+        </section>
+      </main>
+    </div>
 
-          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar no Firebase & Imprimir</button>
-        </form>
-      </section>
+    <!-- ==================== TELA 3: ORÇAMENTOS ==================== -->
+    <div id="screen-orcamentos" class="screen-content">
+      <main class="main-grid">
+        <section class="card">
+          <h2><i class="fa-solid fa-calculator" style="color: var(--teal);"></i> Novo Orçamento</h2>
+          <form id="form-orcamento">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nº do Orçamento / Pedido</label>
+                <input type="text" id="o_nf" required placeholder="Ex: ORC-109">
+              </div>
+              <div class="form-group">
+                <label>Data de Emissão</label>
+                <input type="date" id="o_data_emissao" required onchange="calcValidadeOrcamento()">
+              </div>
+            </div>
 
-      <!-- Tabela de Registros -->
-      <section class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2><i class="fa-solid fa-database" style="color: var(--accent);"></i> Histórico de Registros</h2>
-          <input type="text" id="search-input" onkeyup="filterTable()" placeholder="Buscar cliente, NF, chave..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius:8px; width: 220px;">
-        </div>
+            <div class="form-group">
+              <label>Cliente / Razão Social</label>
+              <input type="text" id="o_cliente" required placeholder="Nome do Cliente">
+            </div>
 
-        <div style="overflow-x: auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>Código/NF</th>
-                <th>Tipo</th>
-                <th>Cliente / Envolvidos</th>
-                <th>Descrição / Rota</th>
-                <th>Valor</th>
-                <th>Validade / Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="table-body">
-              <!-- JS dinamico via Firebase -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+            <div class="form-group">
+              <label>WhatsApp / Telefone</label>
+              <input type="text" id="o_telefone" required placeholder="Ex: 11999999999">
+            </div>
+
+            <div class="form-group">
+              <label>Descrição das Peças / Serviços</label>
+              <input type="text" id="o_produto" required placeholder="Ex: Amortecedores dianteiros + Mão de Obra">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor Total do Orçamento (R$)</label>
+                <input type="number" step="0.01" id="o_valor" required placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label>Validade do Orçamento (10 Dias)</label>
+                <input type="text" id="o_validade_exibicao" readonly style="background:#e2e8f0; font-weight:bold;" placeholder="DD/MM/AAAA">
+                <input type="hidden" id="o_validade">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Empresa Emitente:</label>
+              <div class="preview-stamp-box">
+                <i class="fa-solid fa-building" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
+                <strong>DANIELLE APARECIDA BATISTA LOURENÇO</strong>
+                <span>CNPJ: 18.615.637/0001-58</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="background: var(--teal);"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar Orçamento & Imprimir</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2><i class="fa-solid fa-file-invoice-dollar" style="color: var(--teal);"></i> Histórico de Orçamentos</h2>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Peças / Serviço</th>
+                  <th>Valor</th>
+                  <th>Válido Até</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tb-orcamentos"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
   </div>
 
   <!-- FORMATO PARA IMPRESSÃO / SALVAR EM PDF -->
@@ -470,7 +628,6 @@
             <span id="p-telefone"></span>
           </div>
 
-          <!-- Campos dinâmicos do CT-e no impresso -->
           <div id="p-box-cte" style="display:none;">
             <div class="ticket-row">
               <label>REMETENTE:</label>
@@ -522,7 +679,6 @@
           </div>
         </div>
 
-        <!-- CARIMBO DE EMITENTE -->
         <div class="carimbo-mini">
           <div>✔ EMITIDO & AUTENTICADO DIGITALMENTE</div>
           <div class="nome-empresa">DANIELLE APARECIDA BATISTA LOURENÇO</div>
@@ -534,14 +690,13 @@
         </div>
       </div>
 
-      <!-- IMAGEM EXIBIDA EXCLUSIVAMENTE NO CUPOM DE GARANTIA -->
       <div class="notice-image-side" id="p-notice-image" style="display:none;">
         <img src="WhatsApp Image 2026-09-08 at 15.00.17.jpeg" alt="Aviso Importante - Prazo Devolução">
       </div>
     </div>
   </div>
 
-  <!-- SCRIPT DO FIREBASE (MÓDULOS) -->
+  <!-- SCRIPT FIREBASE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -561,7 +716,6 @@
     const cuponsRef = ref(db, 'cupons');
 
     let cupons = [];
-    let currentFilter = 'Todos';
 
     window.formatarDataBR = function(dataIso) {
       if (!dataIso) return '-';
@@ -570,100 +724,82 @@
       return `${partes[2]}/${partes[1]}/${partes[0]}`;
     }
 
+    // ALTERNAR TELAS
+    window.switchScreen = function(screenId, btn) {
+      document.querySelectorAll('.screen-content').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.screen-tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      btn.classList.add('active');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('data_emissao').value = new Date().toISOString().split('T')[0];
-      calcularValidade();
-      toggleFormFields();
+      const hoje = new Date().toISOString().split('T')[0];
+      document.getElementById('c_data_emissao').value = hoje;
+      document.getElementById('cte_data_emissao').value = hoje;
+      document.getElementById('o_data_emissao').value = hoje;
+
+      calcValidadeCupons();
+      calcValidadeOrcamento();
+      toggleFormCupons();
     });
 
-    window.calcularValidade = function() {
-      const em = document.getElementById('data_emissao').value;
+    window.calcValidadeCupons = function() {
+      const em = document.getElementById('c_data_emissao').value;
       if (!em) return;
-      const tipo = document.getElementById('tipo_doc').value;
       const d = new Date(em + 'T00:00:00');
-
-      if (tipo === 'Orçamento') {
-        d.setDate(d.getDate() + 10); // Orçamento válido por 10 dias
-      } else {
-        d.setMonth(d.getMonth() + 3); // 3 Meses para Garantia
-      }
-
+      d.setMonth(d.getMonth() + 3);
+      
       const ano = d.getFullYear();
       const mes = String(d.getMonth() + 1).padStart(2, '0');
       const dia = String(d.getDate()).padStart(2, '0');
-
-      const isoValidade = `${ano}-${mes}-${dia}`;
-      document.getElementById('data_validade').value = isoValidade;
-      document.getElementById('data_validade_exibicao').value = formatarDataBR(isoValidade);
+      const isoVal = `${ano}-${mes}-${dia}`;
+      
+      document.getElementById('c_validade').value = isoVal;
+      document.getElementById('c_validade_exibicao').value = formatarDataBR(isoVal);
     }
 
-    window.toggleFormFields = function() {
-      const tipo = document.getElementById('tipo_doc').value;
-      const grpValidade = document.getElementById('group-validade');
-      const grpPix = document.getElementById('group-pix');
-      const grpProduto = document.getElementById('group-produto');
-      const inputProduto = document.getElementById('produto');
-      const grpCte = document.getElementById('group-cte-fields');
-      const grpCliente = document.getElementById('group-cliente');
-      const grpTelefone = document.getElementById('group-telefone');
-      const labelNf = document.getElementById('label-nf');
-      const labelValor = document.getElementById('label-valor');
-      const labelValidadeTxt = document.getElementById('label-validade-txt');
+    window.calcValidadeOrcamento = function() {
+      const em = document.getElementById('o_data_emissao').value;
+      if (!em) return;
+      const d = new Date(em + 'T00:00:00');
+      d.setDate(d.getDate() + 10);
+      
+      const ano = d.getFullYear();
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const dia = String(d.getDate()).padStart(2, '0');
+      const isoVal = `${ano}-${mes}-${dia}`;
 
-      labelNf.textContent = 'Nº Nota Fiscal / Pedido';
-      labelValor.textContent = 'Valor (R$)';
+      document.getElementById('o_validade').value = isoVal;
+      document.getElementById('o_validade_exibicao').value = formatarDataBR(isoVal);
+    }
+
+    window.toggleFormCupons = function() {
+      const tipo = document.getElementById('c_tipo_doc').value;
+      const grpVal = document.getElementById('c_grp_validade');
+      const grpPix = document.getElementById('c_grp_pix');
+      const grpProd = document.getElementById('c_grp_produto');
+      const inputProd = document.getElementById('c_produto');
 
       if (tipo === 'Garantia') {
-        grpValidade.style.display = 'block';
-        labelValidadeTxt.textContent = 'Validade Garantia (3 Meses)';
+        grpVal.style.display = 'block';
         grpPix.style.display = 'none';
-        grpProduto.style.display = 'block';
-        grpCte.style.display = 'none';
-        grpCliente.style.display = 'block';
-        grpTelefone.style.display = 'block';
-        inputProduto.required = true;
-      } else if (tipo === 'Orçamento') {
-        grpValidade.style.display = 'block';
-        labelValidadeTxt.textContent = 'Orçamento Válido Até (10 Dias)';
-        grpPix.style.display = 'none';
-        grpProduto.style.display = 'block';
-        grpCte.style.display = 'none';
-        grpCliente.style.display = 'block';
-        grpTelefone.style.display = 'block';
-        inputProduto.required = true;
+        grpProd.style.display = 'block';
+        inputProd.required = true;
       } else if (tipo === 'Estorno') {
-        grpValidade.style.display = 'none';
+        grpVal.style.display = 'none';
         grpPix.style.display = 'block';
-        grpProduto.style.display = 'block';
-        grpCte.style.display = 'none';
-        grpCliente.style.display = 'block';
-        grpTelefone.style.display = 'block';
-        inputProduto.required = true;
-      } else if (tipo === 'Vale-Crédito') {
-        grpValidade.style.display = 'none';
+        grpProd.style.display = 'block';
+        inputProd.required = true;
+      } else { // Vale-Crédito
+        grpVal.style.display = 'none';
         grpPix.style.display = 'none';
-        grpProduto.style.display = 'none';
-        grpCte.style.display = 'none';
-        grpCliente.style.display = 'block';
-        grpTelefone.style.display = 'block';
-        inputProduto.required = false;
-        inputProduto.value = '';
-      } else if (tipo === 'CT-e') {
-        grpValidade.style.display = 'none';
-        grpPix.style.display = 'none';
-        grpProduto.style.display = 'block';
-        grpCte.style.display = 'block';
-        grpCliente.style.display = 'none';
-        grpTelefone.style.display = 'none';
-        labelNf.textContent = 'Nº do CT-e / Minuta';
-        labelValor.textContent = 'Valor do Frete (R$)';
-        document.getElementById('label-produto').textContent = 'Carga / Produto Transportado';
-        inputProduto.required = true;
+        grpProd.style.display = 'none';
+        inputProd.required = false;
+        inputProd.value = '';
       }
-      calcularValidade();
     }
 
-    // SINCRONIZAÇÃO EM TEMPO REAL FIREBASE
+    // LISTENER EM TEMPO REAL FIREBASE
     onValue(cuponsRef, (snapshot) => {
       const data = snapshot.val();
       cupons = [];
@@ -672,97 +808,154 @@
           cupons.push({ firebaseKey, ...data[firebaseKey] });
         });
       }
-      renderTable();
+      renderAllTables();
       updateKPIs();
     });
 
-    // SALVAR REGISTRO
-    document.getElementById('cupom-form').addEventListener('submit', (e) => {
+    // CADASTRO TELA 1 (CUPONS / GARANTIAS / ESTORNOS)
+    document.getElementById('form-cupons').addEventListener('submit', (e) => {
       e.preventDefault();
-
-      const tipo = document.getElementById('tipo_doc').value;
-
-      let prefixo = 'GAR-';
-      if (tipo === 'Orçamento') prefixo = 'ORC-';
-      if (tipo === 'Estorno') prefixo = 'EST-';
-      if (tipo === 'Vale-Crédito') prefixo = 'VALE-';
-      if (tipo === 'CT-e') prefixo = 'CTE-';
-
-      const codigoGerado = prefixo + Math.random().toString(36).substring(2, 7).toUpperCase();
+      const tipo = document.getElementById('c_tipo_doc').value;
+      let prefixo = tipo === 'Estorno' ? 'EST-' : (tipo === 'Vale-Crédito' ? 'VALE-' : 'GAR-');
 
       const item = {
-        id: codigoGerado,
+        id: prefixo + Math.random().toString(36).substring(2, 7).toUpperCase(),
         tipo: tipo,
-        nf: document.getElementById('nf').value,
-        emissao: document.getElementById('data_emissao').value,
-        validade: document.getElementById('data_validade').value,
-        cliente: tipo === 'CT-e' ? document.getElementById('cte_destinatario').value : document.getElementById('cliente').value,
-        telefone: document.getElementById('telefone').value || '-',
-        produto: tipo === 'Vale-Crédito' ? 'Crédito em Loja' : document.getElementById('produto').value,
-        valor: parseFloat(document.getElementById('valor').value) || 0,
-        pix: document.getElementById('pix').value || '-',
-        cte_remetente: document.getElementById('cte_remetente').value || '-',
-        cte_destinatario: document.getElementById('cte_destinatario').value || '-',
-        cte_origem: document.getElementById('cte_origem').value || '-',
-        cte_destino: document.getElementById('cte_destino').value || '-',
-        cte_rntrc: document.getElementById('cte_rntrc').value || '-',
-        cte_cfop: document.getElementById('cte_cfop').value || '-',
-        cte_chave: document.getElementById('cte_chave').value || '-',
-        status: tipo === 'Garantia' ? 'Ativa' : (tipo === 'Orçamento' ? 'Pendente' : (tipo === 'Estorno' ? 'Pendente' : (tipo === 'CT-e' ? 'Emitido' : 'Disponível')))
+        nf: document.getElementById('c_nf').value,
+        emissao: document.getElementById('c_data_emissao').value,
+        validade: document.getElementById('c_validade').value,
+        cliente: document.getElementById('c_cliente').value,
+        telefone: document.getElementById('c_telefone').value || '-',
+        produto: tipo === 'Vale-Crédito' ? 'Crédito em Loja' : document.getElementById('c_produto').value,
+        valor: parseFloat(document.getElementById('c_valor').value) || 0,
+        pix: document.getElementById('c_pix').value || '-',
+        status: tipo === 'Garantia' ? 'Ativa' : (tipo === 'Estorno' ? 'Pendente' : 'Disponível')
       };
 
-      const newRef = push(cuponsRef);
-      set(newRef, item).then(() => {
+      push(cuponsRef, item).then(() => {
         imprimirCupom(item);
         e.target.reset();
-        document.getElementById('data_emissao').value = new Date().toISOString().split('T')[0];
-        calcularValidade();
-        toggleFormFields();
-      }).catch(err => {
-        alert("Erro ao salvar no Firebase: " + err.message);
+        document.getElementById('c_data_emissao').value = new Date().toISOString().split('T')[0];
+        calcValidadeCupons();
+        toggleFormCupons();
       });
     });
 
-    function renderTable() {
-      const tbody = document.getElementById('table-body');
-      tbody.innerHTML = '';
+    // CADASTRO TELA 2 (CT-E)
+    document.getElementById('form-cte').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const item = {
+        id: 'CTE-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+        tipo: 'CT-e',
+        nf: document.getElementById('cte_nf').value,
+        emissao: document.getElementById('cte_data_emissao').value,
+        validade: '-',
+        cliente: document.getElementById('cte_destinatario').value,
+        telefone: '-',
+        produto: document.getElementById('cte_produto').value,
+        valor: parseFloat(document.getElementById('cte_valor').value) || 0,
+        cte_remetente: document.getElementById('cte_remetente').value,
+        cte_destinatario: document.getElementById('cte_destinatario').value,
+        cte_origem: document.getElementById('cte_origem').value,
+        cte_destino: document.getElementById('cte_destino').value,
+        cte_rntrc: document.getElementById('cte_rntrc').value,
+        cte_cfop: document.getElementById('cte_cfop').value,
+        cte_chave: document.getElementById('cte_chave').value,
+        status: 'Emitido'
+      };
 
-      let list = cupons;
-      if (currentFilter !== 'Todos') {
-        list = cupons.filter(c => c.tipo === currentFilter);
-      }
+      push(cuponsRef, item).then(() => {
+        imprimirCupom(item);
+        e.target.reset();
+        document.getElementById('cte_data_emissao').value = new Date().toISOString().split('T')[0];
+      });
+    });
 
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:18px;">Nenhum documento cadastrado no banco de dados.</td></tr>`;
-        return;
-      }
+    // CADASTRO TELA 3 (ORÇAMENTO)
+    document.getElementById('form-orcamento').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const item = {
+        id: 'ORC-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+        tipo: 'Orçamento',
+        nf: document.getElementById('o_nf').value,
+        emissao: document.getElementById('o_data_emissao').value,
+        validade: document.getElementById('o_validade').value,
+        cliente: document.getElementById('o_cliente').value,
+        telefone: document.getElementById('o_telefone').value,
+        produto: document.getElementById('o_produto').value,
+        valor: parseFloat(document.getElementById('o_valor').value) || 0,
+        status: 'Pendente'
+      };
 
-      list.forEach(c => {
-        let badge = 'badge-garantia';
-        if (c.tipo === 'Orçamento') badge = 'badge-orcamento';
-        if (c.tipo === 'Estorno') badge = 'badge-estorno';
-        if (c.tipo === 'Vale-Crédito') badge = 'badge-credito';
-        if (c.tipo === 'CT-e') badge = 'badge-cte';
+      push(cuponsRef, item).then(() => {
+        imprimirCupom(item);
+        e.target.reset();
+        document.getElementById('o_data_emissao').value = new Date().toISOString().split('T')[0];
+        calcValidadeOrcamento();
+      });
+    });
 
-        let desc = c.produto;
-        if (c.tipo === 'CT-e') {
-          desc = `${c.cte_origem} ➔ ${c.cte_destino} (${c.produto})`;
-        }
+    function renderAllTables() {
+      // TELA 1
+      const tb1 = document.getElementById('tb-cupons');
+      tb1.innerHTML = '';
+      const list1 = cupons.filter(c => c.tipo === 'Garantia' || c.tipo === 'Estorno' || c.tipo === 'Vale-Crédito');
+      list1.forEach(c => {
+        let badge = c.tipo === 'Garantia' ? 'badge-garantia' : (c.tipo === 'Estorno' ? 'badge-estorno' : 'badge-credito');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${c.id}</strong><br><small style="color:#64748b">NF: ${c.nf}</small></td>
+          <td><span class="badge ${badge}">${c.tipo}</span></td>
+          <td>${c.cliente}<br><small style="color:#64748b">${c.telefone}</small></td>
+          <td>${c.produto}</td>
+          <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
+          <td>${c.tipo === 'Garantia' ? `Até ${formatarDataBR(c.validade)}` : c.status}</td>
+          <td>
+            <button class="btn" style="background:#2563eb; color:white; padding:4px 8px;" onclick="imprimirPorId('${c.firebaseKey}')"><i class="fa-solid fa-print"></i></button>
+            <button class="btn btn-danger" style="padding:4px 8px;" onclick="deletarItem('${c.firebaseKey}')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tb1.appendChild(tr);
+      });
 
+      // TELA 2 (CT-E)
+      const tb2 = document.getElementById('tb-cte');
+      tb2.innerHTML = '';
+      const list2 = cupons.filter(c => c.tipo === 'CT-e');
+      list2.forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${c.id}</strong><br><small style="color:#64748b">Doc: ${c.nf}</small></td>
-          <td><span class="badge ${badge}">${c.tipo}</span></td>
-          <td>${c.cliente}<br><small style="color:#64748b">${c.telefone}</small></td>
-          <td>${desc}</td>
+          <td>${c.cte_remetente} ➔ ${c.cte_destinatario}</td>
+          <td>${c.cte_origem} - ${c.cte_destino}</td>
+          <td>${c.produto}</td>
           <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
-          <td>${(c.tipo === 'Garantia' || c.tipo === 'Orçamento') ? `Até ${formatarDataBR(c.validade)}` : c.status}</td>
           <td>
-            <button class="btn" style="background:#2563eb; color:white; padding:5px 9px;" onclick="imprimirPorId('${c.firebaseKey}')" title="Imprimir / PDF"><i class="fa-solid fa-file-pdf"></i> Imprimir</button>
-            <button class="btn btn-danger" style="padding:5px 9px;" onclick="deletarCupom('${c.firebaseKey}')"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn" style="background:#2563eb; color:white; padding:4px 8px;" onclick="imprimirPorId('${c.firebaseKey}')"><i class="fa-solid fa-print"></i></button>
+            <button class="btn btn-danger" style="padding:4px 8px;" onclick="deletarItem('${c.firebaseKey}')"><i class="fa-solid fa-trash"></i></button>
           </td>
         `;
-        tbody.appendChild(tr);
+        tb2.appendChild(tr);
+      });
+
+      // TELA 3 (ORÇAMENTOS)
+      const tb3 = document.getElementById('tb-orcamentos');
+      tb3.innerHTML = '';
+      const list3 = cupons.filter(c => c.tipo === 'Orçamento');
+      list3.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${c.id}</strong><br><small style="color:#64748b">Ped: ${c.nf}</small></td>
+          <td>${c.cliente}<br><small style="color:#64748b">${c.telefone}</small></td>
+          <td>${c.produto}</td>
+          <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
+          <td>Até ${formatarDataBR(c.validade)}</td>
+          <td>
+            <button class="btn" style="background:#2563eb; color:white; padding:4px 8px;" onclick="imprimirPorId('${c.firebaseKey}')"><i class="fa-solid fa-print"></i></button>
+            <button class="btn btn-danger" style="padding:4px 8px;" onclick="deletarItem('${c.firebaseKey}')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tb3.appendChild(tr);
       });
     }
 
@@ -826,14 +1019,14 @@
         boxGarantia.style.display = 'block';
         document.getElementById('p-lbl-gar-titulo').textContent = 'TIPO:';
         document.getElementById('p-val-gar-sub').textContent = 'PREVISÃO DE VALOR';
-        document.getElementById('p-lbl-gar-val').textContent = 'O.C. VÁLIDO ATÉ:';
+        document.getElementById('p-lbl-gar-val').textContent = 'VALIDEZ ORÇAMENTO:';
         document.getElementById('p-validade').textContent = formatarDataBR(item.validade);
 
         boxPix.style.display = 'none';
 
         imgNotice.style.display = 'none';
         ticketCard.classList.remove('has-border');
-        obsRodape.textContent = "Este documento é apenas um orçamento preliminar sujeito a alteração de estoque/preço.";
+        obsRodape.textContent = "Orçamento sujeito a alteração de estoque e tabela sem aviso prévio.";
       } else if (item.tipo === 'Estorno') {
         rowCliente.style.display = 'flex';
         rowTelefone.style.display = 'flex';
@@ -896,13 +1089,6 @@
       window.print();
     }
 
-    window.filterType = function(tipo, btn) {
-      currentFilter = tipo;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderTable();
-    }
-
     function updateKPIs() {
       const garantias = cupons.filter(c => c.tipo === 'Garantia').length;
       const orcamentos = cupons.filter(c => c.tipo === 'Orçamento').reduce((s, c) => s + c.valor, 0);
@@ -917,30 +1103,21 @@
       document.getElementById('kpi-cte').textContent = `R$ ${ctes.toFixed(2)}`;
     }
 
-    window.deletarCupom = function(firebaseKey) {
-      if (confirm('Deseja realmente excluir este registro do Firebase?')) {
-        const itemRef = ref(db, 'cupons/' + firebaseKey);
-        remove(itemRef);
+    window.deletarItem = function(firebaseKey) {
+      if (confirm('Deseja excluir este registro do Firebase?')) {
+        remove(ref(db, 'cupons/' + firebaseKey));
       }
     }
 
-    window.filterTable = function() {
-      const text = document.getElementById('search-input').value.toLowerCase();
-      const rows = document.querySelectorAll('#table-body tr');
-      rows.forEach(r => {
-        r.style.display = r.textContent.toLowerCase().includes(text) ? '' : 'none';
-      });
-    }
-
     window.exportCSV = function() {
-      let csv = 'Codigo,Tipo,DataEmissao,Validade,NF,Cliente,Produto,Valor,Status,ChaveCTE\n';
+      let csv = 'Codigo,Tipo,DataEmissao,Validade,NF,Cliente,Produto,Valor,Status\n';
       cupons.forEach(c => {
-        csv += `${c.id},${c.tipo},${formatarDataBR(c.emissao)},${formatarDataBR(c.validade)},${c.nf},"${c.cliente}","${c.produto}",${c.valor},${c.status},"${c.cte_chave || ''}"\n`;
+        csv += `${c.id},${c.tipo},${formatarDataBR(c.emissao)},${formatarDataBR(c.validade)},${c.nf},"${c.cliente}","${c.produto}",${c.valor},${c.status}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'Documentos_Firebase_DL.csv';
+      a.download = 'DL_AutoPecas_Todos_Registros.csv';
       a.click();
     }
   </script>
