@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DL Auto Peças - Emissor Geral, CT-e e Firebase</title>
+  <title>DL Auto Peças - Emissor Geral, CT-e, Orçamentos e Firebase</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -20,6 +20,7 @@
       --danger: #ef4444;
       --purple: #8b5cf6;
       --orange: #f97316;
+      --teal: #0d9488;
       --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
@@ -64,7 +65,7 @@
 
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
       margin-bottom: 20px;
     }
@@ -78,7 +79,7 @@
     }
 
     .kpi-card span { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-    .kpi-card .val { font-size: 1.4rem; font-weight: 700; margin-top: 6px; }
+    .kpi-card .val { font-size: 1.3rem; font-weight: 700; margin-top: 6px; }
 
     .tabs-container {
       display: flex;
@@ -150,6 +151,7 @@
     .badge-estorno { background: #fee2e2; color: #991b1b; }
     .badge-credito { background: #f3e8ff; color: #6b21a8; }
     .badge-cte { background: #ffedd5; color: #c2410c; }
+    .badge-orcamento { background: #ccfbf1; color: #0f766e; }
 
     .preview-stamp-box {
       border: 2px dashed #003399;
@@ -259,7 +261,7 @@
   <div class="app-container">
     <header>
       <div>
-        <h1><i class="fa-solid fa-truck-fast" style="color: #60a5fa;"></i> DL Auto Peças - Emissor Geral, CT-e</h1>
+        <h1><i class="fa-solid fa-calculator" style="color: #60a5fa;"></i> DL Auto Peças - Módulo Integrado</h1>
         <div class="subtitle">DANIELLE APARECIDA BATISTA LOURENÇO | CNPJ: 18.615.637/0001-58</div>
       </div>
       <div>
@@ -274,6 +276,10 @@
         <span>Garantias Ativas</span>
         <div class="val" id="kpi-garantias">0</div>
       </div>
+      <div class="kpi-card" style="border-left: 4px solid var(--teal);">
+        <span>Orçamentos (R$)</span>
+        <div class="val" id="kpi-orcamentos" style="color: var(--teal);">R$ 0,00</div>
+      </div>
       <div class="kpi-card" style="border-left: 4px solid var(--danger);">
         <span>Total Estornos</span>
         <div class="val" id="kpi-estornos" style="color: var(--danger);">R$ 0,00</div>
@@ -283,7 +289,7 @@
         <div class="val" id="kpi-creditos" style="color: var(--purple);">R$ 0,00</div>
       </div>
       <div class="kpi-card" style="border-left: 4px solid var(--orange);">
-        <span>Total Fretes CT-e</span>
+        <span>Fretes CT-e</span>
         <div class="val" id="kpi-cte" style="color: var(--orange);">R$ 0,00</div>
       </div>
     </section>
@@ -291,6 +297,7 @@
     <!-- Filtros -->
     <div class="tabs-container">
       <button class="tab-btn active" onclick="filterType('Todos', this)">Todos</button>
+      <button class="tab-btn" onclick="filterType('Orçamento', this)">Orçamentos</button>
       <button class="tab-btn" onclick="filterType('Garantia', this)">Garantia (3 Meses)</button>
       <button class="tab-btn" onclick="filterType('Estorno', this)">Estorno (Devolução)</button>
       <button class="tab-btn" onclick="filterType('Vale-Crédito', this)">Vale-Crédito</button>
@@ -300,12 +307,13 @@
     <main class="main-grid">
       <!-- Formulário -->
       <section class="card">
-        <h2><i class="fa-solid fa-receipt" style="color: var(--accent);"></i> Gerar Documento / CT-e</h2>
+        <h2><i class="fa-solid fa-receipt" style="color: var(--accent);"></i> Gerar Documento</h2>
         <form id="cupom-form">
           <div class="form-group">
             <label>Tipo de Documento</label>
             <select id="tipo_doc" onchange="toggleFormFields()" style="font-weight:700;">
               <option value="Garantia">Cupom de Garantia (3 Meses)</option>
+              <option value="Orçamento">Orçamento de Peças / Serviços</option>
               <option value="Estorno">Solicitação / Cupom de Estorno</option>
               <option value="Vale-Crédito">Cupom de Vale-Crédito</option>
               <option value="CT-e">CT-e (Conhecimento de Transporte)</option>
@@ -366,7 +374,7 @@
 
           <!-- Peça / Produto -->
           <div class="form-group" id="group-produto">
-            <label id="label-produto">Descrição da Peça (Mecânica / Elétrica)</label>
+            <label id="label-produto">Descrição da Peça / Serviço</label>
             <input type="text" id="produto" required placeholder="Ex: Alternador / Kit de Embreagem">
           </div>
 
@@ -376,7 +384,7 @@
               <input type="number" step="0.01" id="valor" required placeholder="0.00">
             </div>
             <div class="form-group" id="group-validade">
-              <label>Validade Garantia (3 Meses)</label>
+              <label id="label-validade-txt">Validade Garantia (3 Meses)</label>
               <input type="text" id="data_validade_exibicao" readonly style="background:#e2e8f0; font-weight:bold;" placeholder="DD/MM/AAAA">
               <input type="hidden" id="data_validade">
             </div>
@@ -391,7 +399,7 @@
           <div class="form-group">
             <label>Emitente Fixado (Empresa):</label>
             <div class="preview-stamp-box">
-              <i class="fa-solid fa-truck" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
+              <i class="fa-solid fa-stamp" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
               <strong>DANIELLE APARECIDA BATISTA LOURENÇO</strong>
               <span>CNPJ: 18.615.637/0001-58</span>
             </div>
@@ -404,8 +412,8 @@
       <!-- Tabela de Registros -->
       <section class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2><i class="fa-solid fa-database" style="color: var(--accent);"></i> Histórico do Firebase</h2>
-          <input type="text" id="search-input" onkeyup="filterTable()" placeholder="Buscar cliente, NF, chave CT-e..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius:8px; width: 220px;">
+          <h2><i class="fa-solid fa-database" style="color: var(--accent);"></i> Histórico de Registros</h2>
+          <input type="text" id="search-input" onkeyup="filterTable()" placeholder="Buscar cliente, NF, chave..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius:8px; width: 220px;">
         </div>
 
         <div style="overflow-x: auto;">
@@ -497,11 +505,11 @@
 
           <div id="p-box-garantia">
             <div class="ticket-row">
-              <label>GARANTIA:</label>
-              <span>3 MESES (LEGAL)</span>
+              <label id="p-lbl-gar-titulo">GARANTIA:</label>
+              <span id="p-val-gar-sub">3 MESES (LEGAL)</span>
             </div>
             <div class="ticket-row">
-              <label>VÁLIDO ATÉ:</label>
+              <label id="p-lbl-gar-val">VÁLIDO ATÉ:</label>
               <span id="p-validade" style="font-weight:bold;"></span>
             </div>
           </div>
@@ -538,7 +546,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Configuração com seus dados da base
     const firebaseConfig = {
       apiKey: "AIzaSyDzqK6rsEJFTTVugE7ICC4nLCUp20pSudk",
       authDomain: "dlcobrancas-e4477.firebaseapp.com",
@@ -549,7 +556,6 @@
       appId: "1:745360410808:web:bcb80a6ae466efa0260c4d"
     };
 
-    // Inicializa o Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const cuponsRef = ref(db, 'cupons');
@@ -573,13 +579,19 @@
     window.calcularValidade = function() {
       const em = document.getElementById('data_emissao').value;
       if (!em) return;
+      const tipo = document.getElementById('tipo_doc').value;
       const d = new Date(em + 'T00:00:00');
-      d.setMonth(d.getMonth() + 3);
-      
+
+      if (tipo === 'Orçamento') {
+        d.setDate(d.getDate() + 10); // Orçamento válido por 10 dias
+      } else {
+        d.setMonth(d.getMonth() + 3); // 3 Meses para Garantia
+      }
+
       const ano = d.getFullYear();
       const mes = String(d.getMonth() + 1).padStart(2, '0');
       const dia = String(d.getDate()).padStart(2, '0');
-      
+
       const isoValidade = `${ano}-${mes}-${dia}`;
       document.getElementById('data_validade').value = isoValidade;
       document.getElementById('data_validade_exibicao').value = formatarDataBR(isoValidade);
@@ -596,12 +608,23 @@
       const grpTelefone = document.getElementById('group-telefone');
       const labelNf = document.getElementById('label-nf');
       const labelValor = document.getElementById('label-valor');
+      const labelValidadeTxt = document.getElementById('label-validade-txt');
 
       labelNf.textContent = 'Nº Nota Fiscal / Pedido';
       labelValor.textContent = 'Valor (R$)';
 
       if (tipo === 'Garantia') {
         grpValidade.style.display = 'block';
+        labelValidadeTxt.textContent = 'Validade Garantia (3 Meses)';
+        grpPix.style.display = 'none';
+        grpProduto.style.display = 'block';
+        grpCte.style.display = 'none';
+        grpCliente.style.display = 'block';
+        grpTelefone.style.display = 'block';
+        inputProduto.required = true;
+      } else if (tipo === 'Orçamento') {
+        grpValidade.style.display = 'block';
+        labelValidadeTxt.textContent = 'Orçamento Válido Até (10 Dias)';
         grpPix.style.display = 'none';
         grpProduto.style.display = 'block';
         grpCte.style.display = 'none';
@@ -637,9 +660,10 @@
         document.getElementById('label-produto').textContent = 'Carga / Produto Transportado';
         inputProduto.required = true;
       }
+      calcularValidade();
     }
 
-    // LEITURA EM TEMPO REAL DO FIREBASE
+    // SINCRONIZAÇÃO EM TEMPO REAL FIREBASE
     onValue(cuponsRef, (snapshot) => {
       const data = snapshot.val();
       cupons = [];
@@ -652,13 +676,14 @@
       updateKPIs();
     });
 
-    // SALVAR NO FIREBASE
+    // SALVAR REGISTRO
     document.getElementById('cupom-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      
+
       const tipo = document.getElementById('tipo_doc').value;
 
       let prefixo = 'GAR-';
+      if (tipo === 'Orçamento') prefixo = 'ORC-';
       if (tipo === 'Estorno') prefixo = 'EST-';
       if (tipo === 'Vale-Crédito') prefixo = 'VALE-';
       if (tipo === 'CT-e') prefixo = 'CTE-';
@@ -683,7 +708,7 @@
         cte_rntrc: document.getElementById('cte_rntrc').value || '-',
         cte_cfop: document.getElementById('cte_cfop').value || '-',
         cte_chave: document.getElementById('cte_chave').value || '-',
-        status: tipo === 'Garantia' ? 'Ativa' : (tipo === 'Estorno' ? 'Pendente' : (tipo === 'CT-e' ? 'Emitido' : 'Disponível'))
+        status: tipo === 'Garantia' ? 'Ativa' : (tipo === 'Orçamento' ? 'Pendente' : (tipo === 'Estorno' ? 'Pendente' : (tipo === 'CT-e' ? 'Emitido' : 'Disponível')))
       };
 
       const newRef = push(cuponsRef);
@@ -714,6 +739,7 @@
 
       list.forEach(c => {
         let badge = 'badge-garantia';
+        if (c.tipo === 'Orçamento') badge = 'badge-orcamento';
         if (c.tipo === 'Estorno') badge = 'badge-estorno';
         if (c.tipo === 'Vale-Crédito') badge = 'badge-credito';
         if (c.tipo === 'CT-e') badge = 'badge-cte';
@@ -722,7 +748,7 @@
         if (c.tipo === 'CT-e') {
           desc = `${c.cte_origem} ➔ ${c.cte_destino} (${c.produto})`;
         }
-        
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${c.id}</strong><br><small style="color:#64748b">Doc: ${c.nf}</small></td>
@@ -730,7 +756,7 @@
           <td>${c.cliente}<br><small style="color:#64748b">${c.telefone}</small></td>
           <td>${desc}</td>
           <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
-          <td>${c.tipo === 'Garantia' ? `Até ${formatarDataBR(c.validade)}` : c.status}</td>
+          <td>${(c.tipo === 'Garantia' || c.tipo === 'Orçamento') ? `Até ${formatarDataBR(c.validade)}` : c.status}</td>
           <td>
             <button class="btn" style="background:#2563eb; color:white; padding:5px 9px;" onclick="imprimirPorId('${c.firebaseKey}')" title="Imprimir / PDF"><i class="fa-solid fa-file-pdf"></i> Imprimir</button>
             <button class="btn btn-danger" style="padding:5px 9px;" onclick="deletarCupom('${c.firebaseKey}')"><i class="fa-solid fa-trash"></i></button>
@@ -746,7 +772,7 @@
     }
 
     function imprimirCupom(item) {
-      document.getElementById('p-tipo-doc').textContent = item.tipo === 'CT-e' ? 'DACTE - CT-E SIMPLIFICADO' : 'CUPOM DE ' + item.tipo.toUpperCase();
+      document.getElementById('p-tipo-doc').textContent = item.tipo === 'CT-e' ? 'DACTE - CT-E SIMPLIFICADO' : (item.tipo === 'Orçamento' ? 'ORÇAMENTO DE PEÇAS / SERVIÇOS' : 'CUPOM DE ' + item.tipo.toUpperCase());
       document.getElementById('p-codigo').textContent = item.id;
       document.getElementById('p-nf').textContent = item.nf;
       document.getElementById('p-emissao').textContent = formatarDataBR(item.emissao);
@@ -767,20 +793,47 @@
         rowTelefone.style.display = 'flex';
         rowProduto.style.display = 'flex';
         boxCte.style.display = 'none';
-        
+
         document.getElementById('p-cliente').textContent = item.cliente;
         document.getElementById('p-telefone').textContent = item.telefone;
         document.getElementById('p-lbl-prod').textContent = 'PRODUTO:';
         document.getElementById('p-produto').textContent = item.produto;
         document.getElementById('p-lbl-valor').textContent = 'VALOR:';
-        
+
         boxGarantia.style.display = 'block';
-        boxPix.style.display = 'none';
+        document.getElementById('p-lbl-gar-titulo').textContent = 'GARANTIA:';
+        document.getElementById('p-val-gar-sub').textContent = '3 MESES (LEGAL)';
+        document.getElementById('p-lbl-gar-val').textContent = 'VÁLIDO ATÉ:';
         document.getElementById('p-validade').textContent = formatarDataBR(item.validade);
-        
+
+        boxPix.style.display = 'none';
+
         imgNotice.style.display = 'flex';
         ticketCard.classList.add('has-border');
         obsRodape.textContent = "Garantia de 90 dias contra defeitos de fabricação. Não cobre instalação incorreta ou mau uso.";
+      } else if (item.tipo === 'Orçamento') {
+        rowCliente.style.display = 'flex';
+        rowTelefone.style.display = 'flex';
+        rowProduto.style.display = 'flex';
+        boxCte.style.display = 'none';
+
+        document.getElementById('p-cliente').textContent = item.cliente;
+        document.getElementById('p-telefone').textContent = item.telefone;
+        document.getElementById('p-lbl-prod').textContent = 'PEÇA / SERVIÇO:';
+        document.getElementById('p-produto').textContent = item.produto;
+        document.getElementById('p-lbl-valor').textContent = 'VALOR TOTAL:';
+
+        boxGarantia.style.display = 'block';
+        document.getElementById('p-lbl-gar-titulo').textContent = 'TIPO:';
+        document.getElementById('p-val-gar-sub').textContent = 'PREVISÃO DE VALOR';
+        document.getElementById('p-lbl-gar-val').textContent = 'O.C. VÁLIDO ATÉ:';
+        document.getElementById('p-validade').textContent = formatarDataBR(item.validade);
+
+        boxPix.style.display = 'none';
+
+        imgNotice.style.display = 'none';
+        ticketCard.classList.remove('has-border');
+        obsRodape.textContent = "Este documento é apenas um orçamento preliminar sujeito a alteração de estoque/preço.";
       } else if (item.tipo === 'Estorno') {
         rowCliente.style.display = 'flex';
         rowTelefone.style.display = 'flex';
@@ -792,11 +845,11 @@
         document.getElementById('p-lbl-prod').textContent = 'PRODUTO:';
         document.getElementById('p-produto').textContent = item.produto;
         document.getElementById('p-lbl-valor').textContent = 'VALOR:';
-        
+
         boxGarantia.style.display = 'none';
         boxPix.style.display = 'block';
         document.getElementById('p-pix').textContent = item.pix;
-        
+
         imgNotice.style.display = 'none';
         ticketCard.classList.remove('has-border');
         obsRodape.textContent = "Solicitação de estorno em processamento.";
@@ -812,7 +865,7 @@
 
         boxGarantia.style.display = 'none';
         boxPix.style.display = 'none';
-        
+
         imgNotice.style.display = 'none';
         ticketCard.classList.remove('has-border');
         obsRodape.textContent = "Vale-Crédito válido para utilização em compras futuras na loja.";
@@ -852,11 +905,13 @@
 
     function updateKPIs() {
       const garantias = cupons.filter(c => c.tipo === 'Garantia').length;
+      const orcamentos = cupons.filter(c => c.tipo === 'Orçamento').reduce((s, c) => s + c.valor, 0);
       const estornos = cupons.filter(c => c.tipo === 'Estorno').reduce((s, c) => s + c.valor, 0);
       const creditos = cupons.filter(c => c.tipo === 'Vale-Crédito').reduce((s, c) => s + c.valor, 0);
       const ctes = cupons.filter(c => c.tipo === 'CT-e').reduce((s, c) => s + c.valor, 0);
 
       document.getElementById('kpi-garantias').textContent = garantias;
+      document.getElementById('kpi-orcamentos').textContent = `R$ ${orcamentos.toFixed(2)}`;
       document.getElementById('kpi-estornos').textContent = `R$ ${estornos.toFixed(2)}`;
       document.getElementById('kpi-creditos').textContent = `R$ ${creditos.toFixed(2)}`;
       document.getElementById('kpi-cte').textContent = `R$ ${ctes.toFixed(2)}`;
