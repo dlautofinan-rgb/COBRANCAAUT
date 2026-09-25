@@ -1,1372 +1,893 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DL AUTO PEÇAS - Crediário & Orçamento</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- html2pdf.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DL Auto Peças - Emissor Geral, CT-e e Firebase</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+      --orange: #f97316;
+      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: var(--text-main);
+      padding: 20px;
+    }
 
-        .receipt-font {
-            font-family: 'Courier Prime', monospace;
-        }
+    .app-container { max-width: 1400px; margin: 0 auto; }
 
-        .receipt-paper {
-            background-color: #fffef0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 20px 28px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      color: white;
+    }
 
-        .receipt-paper::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: linear-gradient(135deg, #000 25%, transparent 25%) -10px 0,
-                        linear-gradient(225deg, #000 25%, transparent 25%) -10px 0;
-            background-size: 20px 20px;
-            opacity: 0.15;
-        }
+    header h1 { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+    header .subtitle { font-size: 0.85rem; color: #94a3b8; }
 
-        .receipt-paper::after {
-            content: "";
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 8px;
-            background: linear-gradient(-45deg, #fffef0 8px, transparent 0), linear-gradient(45deg, #fffef0 8px, transparent 0);
-            background-repeat: repeat-x;
-            background-position: left bottom;
-            background-size: 16px 16px;
-        }
+    .status-firebase {
+      font-size: 0.75rem;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid #10b981;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            .receipt-paper {
-                box-shadow: none !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 !important;
-                padding: 10px !important;
-            }
-        }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
 
-        .watermark {
-            position: absolute;
-            top: 55%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-25deg);
-            font-size: 3.2rem;
-            font-weight: 900;
-            opacity: 0.08;
-            pointer-events: none;
-            text-transform: uppercase;
-            white-space: nowrap;
-            user-select: none;
-        }
-    </style>
+    .kpi-card {
+      background: var(--card-bg);
+      padding: 18px 20px;
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--shadow);
+    }
+
+    .kpi-card span { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+    .kpi-card .val { font-size: 1.4rem; font-weight: 700; margin-top: 6px; }
+
+    .tabs-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active, .tab-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem;
+      background: #f8fafc; transition: all 0.2s;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn {
+      padding: 9px 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: white; width: 100%; justify-content: center; }
+    .btn-danger { background: #fee2e2; color: var(--danger); }
+
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.83rem; text-align: left; }
+    th { background: #f1f5f9; color: #475569; font-weight: 700; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-weight: 700; font-size: 0.72rem;
+    }
+    .badge-garantia { background: #dbeafe; color: #1e40af; }
+    .badge-estorno { background: #fee2e2; color: #991b1b; }
+    .badge-credito { background: #f3e8ff; color: #6b21a8; }
+    .badge-cte { background: #ffedd5; color: #c2410c; }
+
+    .preview-stamp-box {
+      border: 2px dashed #003399;
+      background: rgba(0, 51, 153, 0.03);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      color: #003399;
+      margin-top: 6px;
+    }
+
+    .preview-stamp-box strong { font-size: 0.8rem; display: block; }
+    .preview-stamp-box span { font-size: 0.72rem; }
+
+    /* FORMATO DE IMPRESSÃO */
+    #printable-area {
+      display: none;
+      background: #fff;
+      color: #000;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .print-wrapper {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      width: fit-content;
+      margin: 0 auto;
+      border: 2px dashed #000;
+      background: #fff;
+    }
+
+    .card-ticket {
+      width: 320px;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .card-ticket.has-border {
+      border-right: 2px dashed #000;
+    }
+
+    .notice-image-side {
+      width: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+
+    .notice-image-side img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .ticket-header {
+      text-align: center;
+      border-bottom: 1px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
+    .ticket-header h2 { font-size: 0.95rem; margin-bottom: 2px; }
+    .ticket-header p { font-size: 0.65rem; color: #333; }
+    .ticket-title { font-size: 0.72rem; font-weight: bold; margin-top: 4px; text-transform: uppercase; background: #eee; padding: 2px; border-radius: 4px; }
+
+    .ticket-body { font-size: 0.70rem; line-height: 1.35; }
+    .ticket-row { display: flex; justify-content: space-between; margin-bottom: 3px; border-bottom: 1px dotted #ccc; padding-bottom: 2px; word-break: break-all; }
+    .ticket-row label { font-weight: bold; margin-right: 4px; }
+
+    .carimbo-mini {
+      border: 2px double #003399;
+      color: #003399;
+      padding: 5px;
+      text-align: center;
+      font-size: 0.60rem;
+      font-weight: bold;
+      border-radius: 6px;
+      margin-top: 8px;
+      background: rgba(0, 51, 153, 0.02);
+      text-transform: uppercase;
+    }
+
+    .carimbo-mini .nome-empresa { font-size: 0.65rem; margin: 2px 0; }
+
+    @media print {
+      @page {
+        size: auto;
+        margin: 5mm;
+      }
+      body * { visibility: hidden; }
+      #printable-area, #printable-area * { visibility: visible; }
+      #printable-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        display: block !important;
+      }
+    }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen pb-12">
+<body>
 
-    <!-- CABEÇALHO DA APLICAÇÃO -->
-    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30 no-print">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-red-600 text-white p-2 rounded-lg font-bold text-xl tracking-wider">
-                    DL
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-tight leading-none">DL AUTO PEÇAS</h1>
-                    <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                        <i class="fa-solid fa-cloud-check text-green-400"></i> Sistema Integrado Nuvem
-                    </p>
-                </div>
-            </div>
-
-            <div class="flex items-center flex-wrap gap-2">
-                <!-- BOTÃO DE ACESSO RÁPIDO PARA O ORÇAMENTO NO TOPO -->
-                <button onclick="toggleBudgetMode()" id="topBudgetToggleBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
-                    <i class="fa-solid fa-file-invoice text-amber-300"></i>
-                    <span id="topBudgetBtnText">Gerador de Orçamentos</span>
-                </button>
-
-                <button onclick="openClientModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-sm font-medium border border-slate-700 transition flex items-center gap-2">
-                    <i class="fa-solid fa-address-book text-amber-400"></i>
-                    <span>Clientes Salvos</span>
-                    <span id="clientCountBadge" class="bg-amber-500 text-slate-950 font-bold text-xs px-2 py-0.5 rounded-full">0</span>
-                </button>
-
-                <button onclick="openPiPWindow()" title="Abrir em Janela Flutuante" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <i class="fa-solid fa-window-restore"></i>
-                    <span class="hidden sm:inline">Flutuante</span>
-                </button>
-
-                <button onclick="resetAllFields()" class="bg-red-900/40 hover:bg-red-800/60 text-red-200 border border-red-700/50 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <i class="fa-solid fa-rotate-right"></i>
-                    <span>Novo Atendimento</span>
-                </button>
-            </div>
-        </div>
+  <div class="app-container">
+    <header>
+      <div>
+        <h1><i class="fa-solid fa-truck-fast" style="color: #60a5fa;"></i> DL Auto Peças - Emissor Geral, CT-e</h1>
+        <div class="subtitle">DANIELLE APARECIDA BATISTA LOURENÇO | CNPJ: 18.615.637/0001-58</div>
+      </div>
+      <div>
+        <span class="status-firebase"><i class="fa-solid fa-database"></i> Firebase Conectado</span>
+        <button class="btn btn-danger" onclick="exportCSV()"><i class="fa-solid fa-file-excel"></i> Exportar CSV</button>
+      </div>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- KPIs -->
+    <section class="kpi-grid">
+      <div class="kpi-card" style="border-left: 4px solid var(--accent);">
+        <span>Garantias Ativas</span>
+        <div class="val" id="kpi-garantias">0</div>
+      </div>
+      <div class="kpi-card" style="border-left: 4px solid var(--danger);">
+        <span>Total Estornos</span>
+        <div class="val" id="kpi-estornos" style="color: var(--danger);">R$ 0,00</div>
+      </div>
+      <div class="kpi-card" style="border-left: 4px solid var(--purple);">
+        <span>Vales-Crédito</span>
+        <div class="val" id="kpi-creditos" style="color: var(--purple);">R$ 0,00</div>
+      </div>
+      <div class="kpi-card" style="border-left: 4px solid var(--orange);">
+        <span>Total Fretes CT-e</span>
+        <div class="val" id="kpi-cte" style="color: var(--orange);">R$ 0,00</div>
+      </div>
+    </section>
 
-        <!-- PAINEL DE FORMULÁRIO (ESQUERDA) -->
-        <section class="lg:col-span-6 space-y-6 no-print">
-
-            <!-- DADOS DO CLIENTE (FIXOS) -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-user-tag text-red-600"></i> Dados do Cliente
-                    </h2>
-                    <span class="text-xs text-slate-400 italic">Preenchimento automático</span>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Buscar / Selecionar Cadastrado</label>
-                    <select id="selectSavedClient" onchange="loadSelectedClient(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                        <option value="">-- Selecionar um Cliente Existente --</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-medium text-slate-700 mb-1">Nome Completo do Cliente *</label>
-                        <input type="text" id="clientName" oninput="autoSaveClientData(); updateReceipt()" placeholder="Ex: João da Silva" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">Telefone / WhatsApp</label>
-                        <input type="text" id="clientPhone" oninput="autoSaveClientData(); updateReceipt()" placeholder="(42) 99999-9999" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">CPF / CNPJ</label>
-                        <input type="text" id="clientDoc" oninput="autoSaveClientData(); updateReceipt()" placeholder="000.000.000-00" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-medium text-slate-700 mb-1">Endereço do Cliente</label>
-                        <input type="text" id="clientAddress" oninput="autoSaveClientData(); updateReceipt()" placeholder="Rua, Número, Bairro, Cidade" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                    </div>
-                </div>
-            </div>
-
-            <!-- PAINEL ESPECÍFICO: CREDIÁRIO -->
-            <div id="panelCrediario" class="space-y-6">
-                <!-- OPÇÕES DO DOCUMENTO -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-sliders text-red-600"></i> Opções do Crediário
-                        </h2>
-                        <span id="docStatusBadge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                            EM ABERTO
-                        </span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">Data de Emissão</label>
-                            <input type="date" id="issueDate" onchange="updateReceipt()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">Data de Vencimento</label>
-                            <input type="date" id="dueDate" onchange="updateReceipt()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
-                        <label class="block text-xs font-bold text-slate-700 uppercase">Estado Atual do Atendimento:</label>
-                        
-                        <div class="grid grid-cols-2 gap-2">
-                            <button type="button" id="btnModePending" onclick="setDocumentMode('PENDING')" class="py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-amber-500 text-white border-amber-600 shadow-sm">
-                                <i class="fa-solid fa-clock"></i> EM ABERTO
-                            </button>
-                            <button type="button" id="btnModePaid" onclick="setDocumentMode('PAID')" class="py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-slate-200 text-slate-700 border-slate-300">
-                                <i class="fa-solid fa-circle-check"></i> QUITADO / PARCIAL
-                            </button>
-                        </div>
-
-                        <div id="paymentMethodContainer" class="pt-2 border-t border-slate-200 space-y-3 hidden">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Forma de Pagamento:</label>
-                                <select id="paymentMethod" onchange="updateReceipt()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
-                                    <option value="PIX">PIX</option>
-                                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                    <option value="Cartão de Débito">Cartão de Débito</option>
-                                    <option value="Dinheiro">Dinheiro</option>
-                                    <option value="Cheque">Cheque</option>
-                                </select>
-                            </div>
-
-                            <div class="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200">
-                                <label class="block text-xs font-bold text-emerald-900 mb-1">Valor Pago (Opcional)</label>
-                                <input type="number" id="partialPaidAmount" step="0.01" min="0" oninput="updateReceipt()" placeholder="Valor pago em dinheiro/PIX" class="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ADICIONAR PEÇAS AO CREDIÁRIO -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-wrench text-red-600"></i> Adicionar Peça (Crediário)
-                        </h2>
-                    </div>
-
-                    <form id="itemForm" onsubmit="addItem(event)" class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">Descrição da Peça / Serviço</label>
-                            <input type="text" id="itemDescription" placeholder="Ex: Jogo de Pastilhas de Freio" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                        </div>
-
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-700 mb-1">Qtd.</label>
-                                <input type="number" id="itemQuantity" min="1" step="1" value="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-medium text-slate-700 mb-1">Valor Unitário (R$)</label>
-                                <input type="number" id="itemPrice" min="0" step="0.01" placeholder="0,00" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Gravar Peça no Saldo
-                        </button>
-                    </form>
-                </div>
-
-                <!-- LISTA DE PEÇAS PENDENTES PARA BAIXA -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Peças Lançadas (Marque para baixar):</h3>
-                    </div>
-                    <div id="itemsContainer" class="divide-y divide-slate-100 max-h-60 overflow-y-auto"></div>
-                </div>
-            </div>
-
-            <!-- PAINEL ESPECÍFICO: ORÇAMENTO -->
-            <div id="panelOrcamento" class="space-y-6 hidden">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-calculator text-blue-600"></i> Adicionar Peça para Orçamento
-                        </h2>
-                    </div>
-
-                    <form onsubmit="addBudgetQuoteItem(event)" class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">Descrição da Peça / Serviço</label>
-                            <input type="text" id="budgetItemDescription" placeholder="Ex: Amortecedor Dianteiro" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-700 mb-1">Qtd.</label>
-                                <input type="number" id="budgetItemQuantity" min="1" step="1" value="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-medium text-slate-700 mb-1">Valor Unitário (R$)</label>
-                                <input type="number" id="budgetItemPrice" min="0" step="0.01" placeholder="0,00" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Adicionar ao Orçamento
-                        </button>
-                    </form>
-                </div>
-
-                <!-- PAINEL DE DESCONTO DO ORÇAMENTO -->
-                <div class="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-5">
-                    <h3 class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-tag"></i> Desconto Aplicado ao Orçamento
-                    </h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">Tipo de Desconto</label>
-                            <select id="budgetDiscountType" onchange="updateReceipt()" class="w-full bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                                <option value="reais">Em Reais (R$)</option>
-                                <option value="porcentagem">Percentual (%)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">Valor do Desconto</label>
-                            <input type="number" id="budgetDiscountValue" min="0" step="0.01" value="0" oninput="updateReceipt()" placeholder="0,00" class="w-full bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Itens do Orçamento Atual:</h3>
-                    <div id="budgetItemsContainer" class="divide-y divide-slate-100 max-h-60 overflow-y-auto"></div>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- VISUALIZAÇÃO DO RECIBO / ORÇAMENTO (DIREITA) -->
-        <section class="lg:col-span-6 space-y-4">
-
-            <!-- BARRA DE AÇÕES -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 no-print flex flex-col gap-3">
-                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider" id="actionToolbarTitle">
-                    Opções de Envio e Impressão (Crediário)
-                </div>
-                
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="crediarioActions">
-                    <button onclick="copyPixAndGenerateReceipt()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-copy"></i>
-                        <span>Copiar PIX/Baixar</span>
-                    </button>
-                    <button onclick="generatePDF()" class="bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        <span>Baixar PDF</span>
-                    </button>
-                    <button onclick="sendWhatsAppText()" class="bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-brands fa-whatsapp text-sm"></i>
-                        <span>Texto WhatsApp</span>
-                    </button>
-                    <button onclick="shareAsImage()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-image"></i>
-                        <span>Foto/PNG</span>
-                    </button>
-                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1 shadow-sm">
-                        <i class="fa-solid fa-print"></i>
-                        <span>Imprimir</span>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-3 gap-2 hidden" id="orcamentoActions">
-                    <button onclick="generatePDF()" class="bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        <span>Baixar PDF Orçamento</span>
-                    </button>
-                    <button onclick="sendBudgetWhatsApp()" class="bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-brands fa-whatsapp text-sm"></i>
-                        <span>WhatsApp Orçamento</span>
-                    </button>
-                    <button onclick="shareBudgetAsImage()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-image"></i>
-                        <span>Foto Orçamento</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- CONTAINER DO CUPOM / RECIBO -->
-            <div id="receiptContainer" class="receipt-paper rounded-lg p-6 receipt-font text-slate-900 text-sm leading-relaxed border border-amber-200/80 relative overflow-hidden max-w-md mx-auto">
-                
-                <div id="watermarkText" class="watermark text-red-900">
-                    CREDIÁRIO
-                </div>
-
-                <div class="text-center border-b-2 border-dashed border-slate-800 pb-4 mb-4">
-                    <h2 class="text-xl font-bold tracking-tight">DL AUTO PEÇAS</h2>
-                    <p class="text-xs mt-0.5">CNPJ: 18.615.637/0001-58</p>
-                    <p class="text-xs">RUA HERACLIO MENDES DE CAMARGO, 3300</p>
-                    <p class="text-xs">CEP: 84168-260 - CASTRO / PR</p>
-                    <div class="mt-2 pt-2 border-t border-slate-300 text-xs font-bold uppercase tracking-wider" id="receiptDocTitle">
-                        *** CREDIÁRIO / EXTRATO DE DÉBITO ***
-                    </div>
-                </div>
-
-                <div class="text-xs space-y-1 mb-4 border-b border-dashed border-slate-400 pb-3">
-                    <div class="flex justify-between"><span class="font-bold" id="labelDocNum">DOC Nº:</span> <span id="receiptNum">#000000</span></div>
-                    <div class="flex justify-between"><span class="font-bold">CLIENTE:</span> <span id="rClientName" class="font-bold uppercase">-------------------</span></div>
-                    <div class="flex justify-between"><span class="font-bold">CPF/CNPJ:</span> <span id="rClientDoc">---</span></div>
-                    <div class="flex justify-between"><span class="font-bold">FONE:</span> <span id="rClientPhone">---</span></div>
-                    <div class="flex justify-between"><span class="font-bold">ENDEREÇO:</span> <span id="rClientAddress" class="truncate max-w-[200px]">---</span></div>
-                    <div class="flex justify-between"><span class="font-bold">EMISSÃO:</span> <span id="rIssueDate">00/00/0000</span></div>
-                    <div class="flex justify-between" id="rowDueDateContainer"><span class="font-bold">VENCIMENTO:</span> <span id="rDueDate" class="font-bold text-red-700">00/00/0000</span></div>
-                </div>
-
-                <div class="mb-4">
-                    <div class="text-xs font-bold border-b border-slate-800 pb-1 mb-2 flex justify-between">
-                        <span>QTD ITEM / DESCRIÇÃO</span>
-                        <span>VALOR (R$)</span>
-                    </div>
-
-                    <div id="receiptItemsList" class="space-y-1 text-xs"></div>
-                </div>
-
-                <div id="receiptSummaryContainer" class="border-t-2 border-dashed border-slate-800 pt-3 space-y-1 text-xs">
-                    <div class="flex justify-between">
-                        <span id="labelTotalTitle">TOTAL PEÇAS/SERVIÇOS:</span>
-                        <span id="rTotalAmount" class="font-bold">R$ 0,00</span>
-                    </div>
-                    <div class="flex justify-between text-blue-700 hidden" id="rDiscountRow">
-                        <span id="rDiscountLabel">DESCONTO APLICADO:</span>
-                        <span id="rDiscountAmount" class="font-bold">- R$ 0,00</span>
-                    </div>
-                    <div class="flex justify-between text-sm font-bold border-t border-slate-400 pt-1 mt-1 hidden" id="rFinalBudgetRow">
-                        <span>TOTAL COM DESCONTO:</span>
-                        <span id="rFinalBudgetAmount" class="text-blue-900">R$ 0,00</span>
-                    </div>
-
-                    <div class="flex justify-between text-emerald-800 hidden" id="rPaidRow">
-                        <span id="labelPaidTitle">TOTAL RECEBIDO:</span>
-                        <span id="rPaidAmount" class="font-bold">R$ 0,00</span>
-                    </div>
-                    <div class="flex justify-between text-sm font-bold border-t border-slate-400 pt-1 mt-1 hidden" id="rBalanceRow">
-                        <span>SALDO RESTANTE:</span>
-                        <span id="rBalanceAmount" class="text-red-700">R$ 0,00</span>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO PARA PEÇAS PENDENTES RESTANTES NO RECIBO DE PAGAMENTO -->
-                <div id="remainingPendingSection" class="mt-4 pt-3 border-t border-dashed border-slate-400 text-xs hidden">
-                    <p class="font-bold text-amber-900 uppercase mb-1">--- PEÇAS PENDENTES RESTANTES ---</p>
-                    <div id="remainingPendingItemsList" class="space-y-1 text-slate-700"></div>
-                </div>
-
-                <div id="rPaymentInfoBox" class="mt-3 p-2 bg-emerald-50 border border-emerald-300 rounded text-center text-xs text-emerald-900 font-bold hidden">
-                    PAGAMENTO RECEBIDO EM: <span id="rPaymentMethodName" class="underline">PIX</span>
-                </div>
-
-                <div id="pixContainerSection" class="mt-4 pt-3 border-t border-slate-300 text-center text-xs space-y-1">
-                    <p class="font-bold uppercase tracking-wider text-slate-800">--- CHAVE PIX PARA PAGAMENTO ---</p>
-                    <p class="font-bold text-slate-900 bg-amber-100/70 py-1 rounded border border-amber-300 select-all">
-                        CNPJ: 18.615.637/0001-58
-                    </p>
-                    <p class="text-[11px] text-slate-700">
-                        NOME: DANIELLE APARECIDA BATISTA LOURENÇO
-                    </p>
-                </div>
-
-                <div class="mt-6 text-center text-[10px] text-slate-600 space-y-3">
-                    <p id="receiptFooterMsg">Agradecemos a preferência!</p>
-                    <div class="pt-6 border-t border-slate-400 w-3/4 mx-auto">
-                        <p>Assinatura do Cliente / Recebedor</p>
-                    </div>
-                    <p id="rTimestamp" class="text-[9px] text-slate-400 pt-1"></p>
-                </div>
-
-            </div>
-        </section>
-
-    </main>
-
-    <!-- MODAL DE CLIENTES CADASTRADOS -->
-    <div id="clientModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
-            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-users text-amber-400"></i> Clientes e Débitos
-                </h3>
-                <button onclick="closeClientModal()" class="text-slate-400 hover:text-white text-xl">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            
-            <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center gap-2">
-                <input type="text" id="searchClientInput" oninput="filterClientList()" placeholder="Filtrar por nome, telefone ou CPF..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                <button onclick="deleteEmptyClients()" title="Apagar registros vazios" class="bg-red-100 hover:bg-red-200 text-red-800 text-xs font-bold px-3 py-2 rounded-lg border border-red-300 whitespace-nowrap transition">
-                    <i class="fa-solid fa-broom"></i> Limpar Vazios
-                </button>
-            </div>
-
-            <div id="modalClientList" class="p-4 overflow-y-auto flex-1 space-y-2"></div>
-
-            <div class="p-3 bg-slate-100 border-t border-slate-200 text-right">
-                <button onclick="closeClientModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm rounded-lg font-medium">
-                    Fechar
-                </button>
-            </div>
-        </div>
+    <!-- Filtros -->
+    <div class="tabs-container">
+      <button class="tab-btn active" onclick="filterType('Todos', this)">Todos</button>
+      <button class="tab-btn" onclick="filterType('Garantia', this)">Garantia (3 Meses)</button>
+      <button class="tab-btn" onclick="filterType('Estorno', this)">Estorno (Devolução)</button>
+      <button class="tab-btn" onclick="filterType('Vale-Crédito', this)">Vale-Crédito</button>
+      <button class="tab-btn" onclick="filterType('CT-e', this)">CT-e (Transporte)</button>
     </div>
 
-    <!-- JAVASCRIPT PRINCIPAL -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDzqK6rsEJFTTVugE7ICC4nLCUp20pSudk",
-            authDomain: "dlcobrancas-e4477.firebaseapp.com",
-            databaseURL: "https://dlcobrancas-e4477-default-rtdb.firebaseio.com",
-            projectId: "dlcobrancas-e4477",
-            storageBucket: "dlcobrancas-e4477.firebasestorage.app",
-            messagingSenderId: "745360410808",
-            appId: "1:745360410808:web:bcb80a6ae466efa0260c4d"
-        };
+    <main class="main-grid">
+      <!-- Formulário -->
+      <section class="card">
+        <h2><i class="fa-solid fa-receipt" style="color: var(--accent);"></i> Gerar Documento / CT-e</h2>
+        <form id="cupom-form">
+          <div class="form-group">
+            <label>Tipo de Documento</label>
+            <select id="tipo_doc" onchange="toggleFormFields()" style="font-weight:700;">
+              <option value="Garantia">Cupom de Garantia (3 Meses)</option>
+              <option value="Estorno">Solicitação / Cupom de Estorno</option>
+              <option value="Vale-Crédito">Cupom de Vale-Crédito</option>
+              <option value="CT-e">CT-e (Conhecimento de Transporte)</option>
+            </select>
+          </div>
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const database = firebase.database();
-        const clientsRef = database.ref('clientes');
+          <div class="form-row">
+            <div class="form-group">
+              <label id="label-nf">Nº Nota Fiscal / Pedido</label>
+              <input type="text" id="nf" required placeholder="Ex: 8842">
+            </div>
+            <div class="form-group">
+              <label>Data de Emissão</label>
+              <input type="date" id="data_emissao" required onchange="calcularValidade()">
+            </div>
+          </div>
 
-        let state = {
-            clients: {},
-            currentClientKey: null,
-            items: [],
-            budgetItems: [],
-            activeTab: 'crediario', // 'crediario' ou 'orcamento'
-            docMode: 'PENDING',
-            docNumber: Math.floor(100000 + Math.random() * 900000),
-            budgetNumber: Math.floor(500000 + Math.random() * 900000)
-        };
+          <div class="form-group" id="group-cliente">
+            <label>Cliente / Razão Social</label>
+            <input type="text" id="cliente" required placeholder="Nome do Cliente">
+          </div>
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('issueDate').value = today;
-            
-            const defaultDue = new Date();
-            defaultDue.setDate(defaultDue.getDate() + 15);
-            document.getElementById('dueDate').value = defaultDue.toISOString().split('T')[0];
+          <div class="form-group" id="group-telefone">
+            <label>WhatsApp / Telefone</label>
+            <input type="text" id="telefone" placeholder="Ex: 11999999999">
+          </div>
 
-            listenToFirebaseClients();
-            updateReceipt();
+          <!-- Campos do CT-e -->
+          <div id="group-cte-fields" style="display:none;">
+            <div class="form-group">
+              <label>Remetente (Origem da Carga)</label>
+              <input type="text" id="cte_remetente" placeholder="Razão Social / CNPJ Remetente">
+            </div>
+            <div class="form-group">
+              <label>Destinatário (Entrega)</label>
+              <input type="text" id="cte_destinatario" placeholder="Razão Social / CNPJ Destinatário">
+            </div>
+            <div class="form-row">
+              <label style="grid-column: 1 / -1; font-size: 0.78rem; font-weight: 700; color: #475569;">Trajeto (Origem - Destino)</label>
+              <input type="text" id="cte_origem" placeholder="Cidade-UF Origem">
+              <input type="text" id="cte_destino" placeholder="Cidade-UF Destino">
+            </div>
+            <div class="form-row" style="margin-top: 10px;">
+              <div class="form-group">
+                <label>RNTRC / Placa</label>
+                <input type="text" id="cte_rntrc" placeholder="RNTRC do Veículo">
+              </div>
+              <div class="form-group">
+                <label>CFOP</label>
+                <input type="text" id="cte_cfop" placeholder="Ex: 5353">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Chave de Acesso CT-e (44 dígitos)</label>
+              <input type="text" id="cte_chave" placeholder="352609186156370001585700100000...">
+            </div>
+          </div>
+
+          <!-- Peça / Produto -->
+          <div class="form-group" id="group-produto">
+            <label id="label-produto">Descrição da Peça (Mecânica / Elétrica)</label>
+            <input type="text" id="produto" required placeholder="Ex: Alternador / Kit de Embreagem">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label id="label-valor">Valor (R$)</label>
+              <input type="number" step="0.01" id="valor" required placeholder="0.00">
+            </div>
+            <div class="form-group" id="group-validade">
+              <label>Validade Garantia (3 Meses)</label>
+              <input type="text" id="data_validade_exibicao" readonly style="background:#e2e8f0; font-weight:bold;" placeholder="DD/MM/AAAA">
+              <input type="hidden" id="data_validade">
+            </div>
+          </div>
+
+          <div class="form-group" id="group-pix" style="display:none;">
+            <label>Chave PIX do Cliente (Para Estorno)</label>
+            <input type="text" id="pix" placeholder="Chave PIX para devolução">
+          </div>
+
+          <!-- Carimbo Fixado -->
+          <div class="form-group">
+            <label>Emitente Fixado (Empresa):</label>
+            <div class="preview-stamp-box">
+              <i class="fa-solid fa-truck" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
+              <strong>DANIELLE APARECIDA BATISTA LOURENÇO</strong>
+              <span>CNPJ: 18.615.637/0001-58</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar no Firebase & Imprimir</button>
+        </form>
+      </section>
+
+      <!-- Tabela de Registros -->
+      <section class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2><i class="fa-solid fa-database" style="color: var(--accent);"></i> Histórico do Firebase</h2>
+          <input type="text" id="search-input" onkeyup="filterTable()" placeholder="Buscar cliente, NF, chave CT-e..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius:8px; width: 220px;">
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Código/NF</th>
+                <th>Tipo</th>
+                <th>Cliente / Envolvidos</th>
+                <th>Descrição / Rota</th>
+                <th>Valor</th>
+                <th>Validade / Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- JS dinamico via Firebase -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- FORMATO PARA IMPRESSÃO / SALVAR EM PDF -->
+  <div id="printable-area">
+    <div class="print-wrapper">
+      <div class="card-ticket" id="p-ticket-card">
+        <div class="ticket-header">
+          <h2>DL AUTO PEÇAS</h2>
+          <p>Peças Mecânicas, Elétricas e Transporte</p>
+          <div class="ticket-title" id="p-tipo-doc">CUPOM DE GARANTIA</div>
+        </div>
+
+        <div class="ticket-body">
+          <div class="ticket-row">
+            <label>CÓDIGO:</label>
+            <span id="p-codigo"></span>
+          </div>
+          <div class="ticket-row">
+            <label id="p-lbl-nf">NF/PEDIDO:</label>
+            <span id="p-nf"></span>
+          </div>
+          <div class="ticket-row">
+            <label>DATA EMISSÃO:</label>
+            <span id="p-emissao"></span>
+          </div>
+          <div class="ticket-row" id="p-row-cliente">
+            <label>CLIENTE:</label>
+            <span id="p-cliente"></span>
+          </div>
+          <div class="ticket-row" id="p-row-telefone">
+            <label>TELEFONE:</label>
+            <span id="p-telefone"></span>
+          </div>
+
+          <!-- Campos dinâmicos do CT-e no impresso -->
+          <div id="p-box-cte" style="display:none;">
+            <div class="ticket-row">
+              <label>REMETENTE:</label>
+              <span id="p-cte-rem"></span>
+            </div>
+            <div class="ticket-row">
+              <label>DESTINATÁRIO:</label>
+              <span id="p-cte-dest"></span>
+            </div>
+            <div class="ticket-row">
+              <label>ROTA:</label>
+              <span id="p-cte-rota"></span>
+            </div>
+            <div class="ticket-row">
+              <label>CFOP / RNTRC:</label>
+              <span id="p-cte-cfop-rntrc"></span>
+            </div>
+            <div class="ticket-row">
+              <label>CHAVE CT-E:</label>
+              <span id="p-cte-chave" style="font-size:0.58rem; font-weight:bold;"></span>
+            </div>
+          </div>
+
+          <div class="ticket-row" id="p-row-produto">
+            <label id="p-lbl-prod">PRODUTO:</label>
+            <span id="p-produto"></span>
+          </div>
+          <div class="ticket-row">
+            <label id="p-lbl-valor">VALOR:</label>
+            <span>R$ <span id="p-valor"></span></span>
+          </div>
+
+          <div id="p-box-garantia">
+            <div class="ticket-row">
+              <label>GARANTIA:</label>
+              <span>3 MESES (LEGAL)</span>
+            </div>
+            <div class="ticket-row">
+              <label>VÁLIDO ATÉ:</label>
+              <span id="p-validade" style="font-weight:bold;"></span>
+            </div>
+          </div>
+
+          <div id="p-box-pix" style="display:none;">
+            <div class="ticket-row">
+              <label>CHAVE PIX:</label>
+              <span id="p-pix"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARIMBO DE EMITENTE -->
+        <div class="carimbo-mini">
+          <div>✔ EMITIDO & AUTENTICADO DIGITALMENTE</div>
+          <div class="nome-empresa">DANIELLE APARECIDA BATISTA LOURENÇO</div>
+          <div>CNPJ: 18.615.637/0001-58</div>
+        </div>
+
+        <div style="font-size:0.58rem; text-align:center; margin-top:6px; color:#555;" id="p-obs-rodape">
+          Garantia de 90 dias contra defeitos de fabricação. Não cobre instalação incorreta ou mau uso.
+        </div>
+      </div>
+
+      <!-- IMAGEM EXIBIDA EXCLUSIVAMENTE NO CUPOM DE GARANTIA -->
+      <div class="notice-image-side" id="p-notice-image" style="display:none;">
+        <img src="WhatsApp Image 2026-09-08 at 15.00.17.jpeg" alt="Aviso Importante - Prazo Devolução">
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT DO FIREBASE (MÓDULOS) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Configuração com seus dados da base
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzqK6rsEJFTTVugE7ICC4nLCUp20pSudk",
+      authDomain: "dlcobrancas-e4477.firebaseapp.com",
+      databaseURL: "https://dlcobrancas-e4477-default-rtdb.firebaseio.com",
+      projectId: "dlcobrancas-e4477",
+      storageBucket: "dlcobrancas-e4477.firebasestorage.app",
+      messagingSenderId: "745360410808",
+      appId: "1:745360410808:web:bcb80a6ae466efa0260c4d"
+    };
+
+    // Inicializa o Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const cuponsRef = ref(db, 'cupons');
+
+    let cupons = [];
+    let currentFilter = 'Todos';
+
+    window.formatarDataBR = function(dataIso) {
+      if (!dataIso) return '-';
+      const partes = dataIso.split('-');
+      if (partes.length !== 3) return dataIso;
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('data_emissao').value = new Date().toISOString().split('T')[0];
+      calcularValidade();
+      toggleFormFields();
+    });
+
+    window.calcularValidade = function() {
+      const em = document.getElementById('data_emissao').value;
+      if (!em) return;
+      const d = new Date(em + 'T00:00:00');
+      d.setMonth(d.getMonth() + 3);
+      
+      const ano = d.getFullYear();
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const dia = String(d.getDate()).padStart(2, '0');
+      
+      const isoValidade = `${ano}-${mes}-${dia}`;
+      document.getElementById('data_validade').value = isoValidade;
+      document.getElementById('data_validade_exibicao').value = formatarDataBR(isoValidade);
+    }
+
+    window.toggleFormFields = function() {
+      const tipo = document.getElementById('tipo_doc').value;
+      const grpValidade = document.getElementById('group-validade');
+      const grpPix = document.getElementById('group-pix');
+      const grpProduto = document.getElementById('group-produto');
+      const inputProduto = document.getElementById('produto');
+      const grpCte = document.getElementById('group-cte-fields');
+      const grpCliente = document.getElementById('group-cliente');
+      const grpTelefone = document.getElementById('group-telefone');
+      const labelNf = document.getElementById('label-nf');
+      const labelValor = document.getElementById('label-valor');
+
+      labelNf.textContent = 'Nº Nota Fiscal / Pedido';
+      labelValor.textContent = 'Valor (R$)';
+
+      if (tipo === 'Garantia') {
+        grpValidade.style.display = 'block';
+        grpPix.style.display = 'none';
+        grpProduto.style.display = 'block';
+        grpCte.style.display = 'none';
+        grpCliente.style.display = 'block';
+        grpTelefone.style.display = 'block';
+        inputProduto.required = true;
+      } else if (tipo === 'Estorno') {
+        grpValidade.style.display = 'none';
+        grpPix.style.display = 'block';
+        grpProduto.style.display = 'block';
+        grpCte.style.display = 'none';
+        grpCliente.style.display = 'block';
+        grpTelefone.style.display = 'block';
+        inputProduto.required = true;
+      } else if (tipo === 'Vale-Crédito') {
+        grpValidade.style.display = 'none';
+        grpPix.style.display = 'none';
+        grpProduto.style.display = 'none';
+        grpCte.style.display = 'none';
+        grpCliente.style.display = 'block';
+        grpTelefone.style.display = 'block';
+        inputProduto.required = false;
+        inputProduto.value = '';
+      } else if (tipo === 'CT-e') {
+        grpValidade.style.display = 'none';
+        grpPix.style.display = 'none';
+        grpProduto.style.display = 'block';
+        grpCte.style.display = 'block';
+        grpCliente.style.display = 'none';
+        grpTelefone.style.display = 'none';
+        labelNf.textContent = 'Nº do CT-e / Minuta';
+        labelValor.textContent = 'Valor do Frete (R$)';
+        document.getElementById('label-produto').textContent = 'Carga / Produto Transportado';
+        inputProduto.required = true;
+      }
+    }
+
+    // LEITURA EM TEMPO REAL DO FIREBASE
+    onValue(cuponsRef, (snapshot) => {
+      const data = snapshot.val();
+      cupons = [];
+      if (data) {
+        Object.keys(data).forEach(firebaseKey => {
+          cupons.push({ firebaseKey, ...data[firebaseKey] });
         });
+      }
+      renderTable();
+      updateKPIs();
+    });
 
-        function toggleBudgetMode() {
-            if (state.activeTab === 'crediario') {
-                switchTab('orcamento');
-            } else {
-                switchTab('crediario');
-            }
+    // SALVAR NO FIREBASE
+    document.getElementById('cupom-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const tipo = document.getElementById('tipo_doc').value;
+
+      let prefixo = 'GAR-';
+      if (tipo === 'Estorno') prefixo = 'EST-';
+      if (tipo === 'Vale-Crédito') prefixo = 'VALE-';
+      if (tipo === 'CT-e') prefixo = 'CTE-';
+
+      const codigoGerado = prefixo + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+      const item = {
+        id: codigoGerado,
+        tipo: tipo,
+        nf: document.getElementById('nf').value,
+        emissao: document.getElementById('data_emissao').value,
+        validade: document.getElementById('data_validade').value,
+        cliente: tipo === 'CT-e' ? document.getElementById('cte_destinatario').value : document.getElementById('cliente').value,
+        telefone: document.getElementById('telefone').value || '-',
+        produto: tipo === 'Vale-Crédito' ? 'Crédito em Loja' : document.getElementById('produto').value,
+        valor: parseFloat(document.getElementById('valor').value) || 0,
+        pix: document.getElementById('pix').value || '-',
+        cte_remetente: document.getElementById('cte_remetente').value || '-',
+        cte_destinatario: document.getElementById('cte_destinatario').value || '-',
+        cte_origem: document.getElementById('cte_origem').value || '-',
+        cte_destino: document.getElementById('cte_destino').value || '-',
+        cte_rntrc: document.getElementById('cte_rntrc').value || '-',
+        cte_cfop: document.getElementById('cte_cfop').value || '-',
+        cte_chave: document.getElementById('cte_chave').value || '-',
+        status: tipo === 'Garantia' ? 'Ativa' : (tipo === 'Estorno' ? 'Pendente' : (tipo === 'CT-e' ? 'Emitido' : 'Disponível'))
+      };
+
+      const newRef = push(cuponsRef);
+      set(newRef, item).then(() => {
+        imprimirCupom(item);
+        e.target.reset();
+        document.getElementById('data_emissao').value = new Date().toISOString().split('T')[0];
+        calcularValidade();
+        toggleFormFields();
+      }).catch(err => {
+        alert("Erro ao salvar no Firebase: " + err.message);
+      });
+    });
+
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      let list = cupons;
+      if (currentFilter !== 'Todos') {
+        list = cupons.filter(c => c.tipo === currentFilter);
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:18px;">Nenhum documento cadastrado no banco de dados.</td></tr>`;
+        return;
+      }
+
+      list.forEach(c => {
+        let badge = 'badge-garantia';
+        if (c.tipo === 'Estorno') badge = 'badge-estorno';
+        if (c.tipo === 'Vale-Crédito') badge = 'badge-credito';
+        if (c.tipo === 'CT-e') badge = 'badge-cte';
+
+        let desc = c.produto;
+        if (c.tipo === 'CT-e') {
+          desc = `${c.cte_origem} ➔ ${c.cte_destino} (${c.produto})`;
         }
-
-        function switchTab(tab) {
-            state.activeTab = tab;
-            const panelCred = document.getElementById('panelCrediario');
-            const panelOrc = document.getElementById('panelOrcamento');
-            const credActions = document.getElementById('crediarioActions');
-            const orcActions = document.getElementById('orcamentoActions');
-            const titleToolbar = document.getElementById('actionToolbarTitle');
-            const topBtnText = document.getElementById('topBudgetBtnText');
-            const topBtn = document.getElementById('topBudgetToggleBtn');
-
-            if (tab === 'crediario') {
-                panelCred.classList.remove('hidden');
-                panelOrc.classList.add('hidden');
-                credActions.classList.remove('hidden');
-                orcActions.classList.add('hidden');
-                titleToolbar.innerText = "Opções de Envio e Impressão (Crediário)";
-                topBtnText.innerText = "Gerador de Orçamentos";
-                topBtn.className = "bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm";
-            } else {
-                panelOrc.classList.remove('hidden');
-                panelCred.classList.add('hidden');
-                orcActions.classList.remove('hidden');
-                credActions.classList.add('hidden');
-                titleToolbar.innerText = "Opções de Envio (Orçamento)";
-                topBtnText.innerText = "Voltar ao Crediário";
-                topBtn.className = "bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm border border-slate-700";
-            }
-            updateReceipt();
-        }
-
-        function listenToFirebaseClients() {
-            clientsRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                state.clients = data;
-                renderClientDropdown();
-                renderClientModalList();
-
-                const validCount = Object.values(data).filter(c => c && c.name && c.name.trim().length > 0).length;
-                document.getElementById('clientCountBadge').innerText = validCount;
-
-                if (state.currentClientKey && data[state.currentClientKey]) {
-                    const cli = data[state.currentClientKey];
-                    state.items = cli.pendingItems ? Object.values(cli.pendingItems) : [];
-                    renderItemList();
-                    updateReceipt();
-                }
-            });
-        }
-
-        let autoSaveTimer = null;
-        function autoSaveClientData() {
-            clearTimeout(autoSaveTimer);
-            autoSaveTimer = setTimeout(() => {
-                const name = document.getElementById('clientName').value.trim();
-                const phone = document.getElementById('clientPhone').value.trim();
-                const doc = document.getElementById('clientDoc').value.trim();
-                const address = document.getElementById('clientAddress').value.trim();
-
-                if (!name) return;
-
-                if (!state.currentClientKey) {
-                    const newRef = clientsRef.push();
-                    state.currentClientKey = newRef.key;
-                }
-
-                clientsRef.child(state.currentClientKey).update({
-                    name, phone, doc, address,
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                });
-            }, 800);
-        }
-
-        function renderClientDropdown() {
-            const select = document.getElementById('selectSavedClient');
-            select.innerHTML = '<option value="">-- Selecionar um Cliente Existente --</option>';
-
-            Object.keys(state.clients)
-                .filter(key => state.clients[key] && state.clients[key].name && state.clients[key].name.trim() !== '')
-                .sort((a,b) => (state.clients[a].name || '').localeCompare(state.clients[b].name || ''))
-                .forEach(key => {
-                    const cli = state.clients[key];
-                    const count = cli.pendingItems ? Object.keys(cli.pendingItems).length : 0;
-                    const option = document.createElement('option');
-                    option.value = key;
-                    option.textContent = `${cli.name} ${count > 0 ? ' (' + count + ' peças pendentes)' : ''}`;
-                    select.appendChild(option);
-                });
-        }
-
-        function loadSelectedClient(key) {
-            if (!key || !state.clients[key]) return;
-            const cli = state.clients[key];
-            state.currentClientKey = key;
-
-            document.getElementById('clientName').value = cli.name || '';
-            document.getElementById('clientPhone').value = cli.phone || '';
-            document.getElementById('clientDoc').value = cli.doc || '';
-            document.getElementById('clientAddress').value = cli.address || '';
-
-            state.items = cli.pendingItems ? Object.values(cli.pendingItems) : [];
-            state.docMode = 'PENDING';
-
-            renderItemList();
-            updateReceipt();
-        }
-
-        function addItem(e) {
-            e.preventDefault();
-            const desc = document.getElementById('itemDescription').value.trim();
-            const qty = parseInt(document.getElementById('itemQuantity').value) || 1;
-            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
-            const name = document.getElementById('clientName').value.trim();
-
-            if (!name) {
-                alert('Informe o Nome do Cliente antes de lançar peças!');
-                document.getElementById('clientName').focus();
-                return;
-            }
-
-            if (!desc || price <= 0) {
-                alert('Informe a descrição e um valor válido.');
-                return;
-            }
-
-            if (!state.currentClientKey) {
-                const newRef = clientsRef.push();
-                state.currentClientKey = newRef.key;
-                autoSaveClientData();
-            }
-
-            const itemId = 'item_' + Date.now();
-            const newItem = { id: itemId, desc, qty, price };
-
-            clientsRef.child(`${state.currentClientKey}/pendingItems/${itemId}`).set(newItem);
-
-            document.getElementById('itemDescription').value = '';
-            document.getElementById('itemQuantity').value = '1';
-            document.getElementById('itemPrice').value = '';
-            document.getElementById('itemDescription').focus();
-        }
-
-        function removeItem(id) {
-            if (state.currentClientKey) {
-                clientsRef.child(`${state.currentClientKey}/pendingItems/${id}`).remove();
-            }
-        }
-
-        function addBudgetQuoteItem(e) {
-            e.preventDefault();
-            const desc = document.getElementById('budgetItemDescription').value.trim();
-            const qty = parseInt(document.getElementById('budgetItemQuantity').value) || 1;
-            const price = parseFloat(document.getElementById('budgetItemPrice').value) || 0;
-
-            if (!desc || price <= 0) {
-                alert('Informe a descrição e valor válidos para o orçamento.');
-                return;
-            }
-
-            const newItem = { id: 'budget_' + Date.now(), desc, qty, price };
-            state.budgetItems.push(newItem);
-
-            document.getElementById('budgetItemDescription').value = '';
-            document.getElementById('budgetItemQuantity').value = '1';
-            document.getElementById('budgetItemPrice').value = '';
-            document.getElementById('budgetItemDescription').focus();
-
-            renderBudgetItemsList();
-            updateReceipt();
-        }
-
-        function removeBudgetQuoteItem(id) {
-            state.budgetItems = state.budgetItems.filter(i => i.id !== id);
-            renderBudgetItemsList();
-            updateReceipt();
-        }
-
-        function renderItemList() {
-            const container = document.getElementById('itemsContainer');
-            if (state.items.length === 0) {
-                container.innerHTML = `<div class="py-4 text-center text-xs text-slate-400 italic">Nenhuma peça pendente para este cliente.</div>`;
-                return;
-            }
-
-            container.innerHTML = state.items.map(item => `
-                <div class="py-2 flex items-center justify-between text-xs border-b border-slate-100">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="check_${item.id}" value="${item.id}" onchange="updateReceipt()" class="item-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300">
-                        <div>
-                            <span class="font-bold text-slate-800">${item.qty}x</span> ${item.desc}
-                            <div class="text-[11px] text-slate-500">R$ ${item.price.toFixed(2)} un. = <strong class="text-slate-700">R$ ${(item.qty * item.price).toFixed(2)}</strong></div>
-                        </div>
-                    </div>
-                    <div>
-                        <button onclick="removeItem('${item.id}')" title="Excluir peça" class="text-red-500 hover:text-red-700 px-2 py-1">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderBudgetItemsList() {
-            const container = document.getElementById('budgetItemsContainer');
-            if (state.budgetItems.length === 0) {
-                container.innerHTML = `<div class="py-4 text-center text-xs text-slate-400 italic">Nenhum item adicionado no orçamento.</div>`;
-                return;
-            }
-
-            container.innerHTML = state.budgetItems.map(item => `
-                <div class="py-2 flex items-center justify-between text-xs border-b border-slate-100">
-                    <div>
-                        <span class="font-bold text-slate-800">${item.qty}x</span> ${item.desc}
-                        <div class="text-[11px] text-slate-500">R$ ${item.price.toFixed(2)} un. = <strong class="text-slate-700">R$ ${(item.qty * item.price).toFixed(2)}</strong></div>
-                    </div>
-                    <div>
-                        <button onclick="removeBudgetQuoteItem('${item.id}')" class="text-red-500 hover:text-red-700 px-2 py-1">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function setDocumentMode(mode) {
-            state.docMode = mode;
-            const btnPending = document.getElementById('btnModePending');
-            const btnPaid = document.getElementById('btnModePaid');
-            const statusBadge = document.getElementById('docStatusBadge');
-            const payBox = document.getElementById('paymentMethodContainer');
-
-            if (mode === 'PENDING') {
-                btnPending.className = "py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-amber-500 text-white border-amber-600 shadow-sm";
-                btnPaid.className = "py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-slate-100 text-slate-700 border-slate-300";
-                statusBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300";
-                statusBadge.innerText = "EM ABERTO";
-                payBox.classList.add('hidden');
-            } else {
-                btnPaid.className = "py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-emerald-600 text-white border-emerald-700 shadow-sm";
-                btnPending.className = "py-2 px-3 text-xs font-bold rounded-lg border transition flex items-center justify-center gap-2 bg-slate-100 text-slate-700 border-slate-300";
-                statusBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
-                statusBadge.innerText = "QUITADO / PARCIAL";
-                payBox.classList.remove('hidden');
-            }
-
-            updateReceipt();
-        }
-
-        function updateReceipt() {
-            const name = document.getElementById('clientName').value.trim() || '-------------------';
-            const phone = document.getElementById('clientPhone').value.trim() || '---';
-            const doc = document.getElementById('clientDoc').value.trim() || '---';
-            const address = document.getElementById('clientAddress').value.trim() || '---';
-            const issueDate = formatDate(document.getElementById('issueDate').value);
-            const dueDate = formatDate(document.getElementById('dueDate').value);
-            const paymentMethod = document.getElementById('paymentMethod').value;
-
-            const watermark = document.getElementById('watermarkText');
-            const title = document.getElementById('receiptDocTitle');
-            const payInfoBox = document.getElementById('rPaymentInfoBox');
-            const rPaidRow = document.getElementById('rPaidRow');
-            const rBalanceRow = document.getElementById('rBalanceRow');
-            const rDiscountRow = document.getElementById('rDiscountRow');
-            const rFinalBudgetRow = document.getElementById('rFinalBudgetRow');
-            const remainingSection = document.getElementById('remainingPendingSection');
-            const pixSection = document.getElementById('pixContainerSection');
-            const rowDueDate = document.getElementById('rowDueDateContainer');
-            const labelDocNum = document.getElementById('labelDocNum');
-
-            // SE ABA ORÇAMENTO
-            if (state.activeTab === 'orcamento') {
-                document.getElementById('receiptNum').innerText = `#${state.budgetNumber}`;
-                labelDocNum.innerText = "ORÇAMENTO Nº:";
-                document.getElementById('rClientName').innerText = name;
-                document.getElementById('rClientPhone').innerText = phone;
-                document.getElementById('rClientDoc').innerText = doc;
-                document.getElementById('rClientAddress').innerText = address;
-                document.getElementById('rIssueDate').innerText = issueDate;
-                rowDueDate.classList.add('hidden');
-
-                watermark.innerText = "ORÇAMENTO";
-                watermark.className = "watermark text-blue-800";
-                title.innerText = "*** ORÇAMENTO DE PEÇAS E SERVIÇOS ***";
-                payInfoBox.classList.add('hidden');
-                rPaidRow.classList.add('hidden');
-                rBalanceRow.classList.add('hidden');
-                remainingSection.classList.add('hidden');
-                pixSection.classList.remove('hidden');
-
-                let totalOrc = 0;
-                const itemsList = document.getElementById('receiptItemsList');
-                if (state.budgetItems.length === 0) {
-                    itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhum item no orçamento --</div>`;
-                } else {
-                    itemsList.innerHTML = state.budgetItems.map(item => {
-                        const sub = item.qty * item.price;
-                        totalOrc += sub;
-                        return `
-                            <div class="flex justify-between items-start">
-                                <span class="pr-2">${item.qty}x ${item.desc}</span>
-                                <span class="font-bold">R$ ${sub.toFixed(2)}</span>
-                            </div>
-                        `;
-                    }).join('');
-                }
-
-                // Cálculo do Desconto do Orçamento
-                const discType = document.getElementById('budgetDiscountType').value;
-                const discInputVal = parseFloat(document.getElementById('budgetDiscountValue').value) || 0;
-                let valorDescontoCalculado = 0;
-
-                if (discInputVal > 0) {
-                    if (discType === 'porcentagem') {
-                        valorDescontoCalculado = (totalOrc * discInputVal) / 100;
-                        document.getElementById('rDiscountLabel').innerText = `DESCONTO (${discInputVal}%):`;
-                    } else {
-                        valorDescontoCalculado = Math.min(totalOrc, discInputVal);
-                        document.getElementById('rDiscountLabel').innerText = `DESCONTO (R$):`;
-                    }
-                }
-
-                const totalFinalOrc = Math.max(0, totalOrc - valorDescontoCalculado);
-
-                document.getElementById('labelTotalTitle').innerText = "SUBTOTAL ORÇAMENTO:";
-                document.getElementById('rTotalAmount').innerText = `R$ ${totalOrc.toFixed(2)}`;
-
-                if (valorDescontoCalculado > 0) {
-                    rDiscountRow.classList.remove('hidden');
-                    rFinalBudgetRow.classList.remove('hidden');
-                    document.getElementById('rDiscountAmount').innerText = `- R$ ${valorDescontoCalculado.toFixed(2)}`;
-                    document.getElementById('rFinalBudgetAmount').innerText = `R$ ${totalFinalOrc.toFixed(2)}`;
-                } else {
-                    rDiscountRow.classList.add('hidden');
-                    rFinalBudgetRow.classList.add('hidden');
-                }
-
-                document.getElementById('receiptFooterMsg').innerText = "Orçamento válido por 7 dias.";
-
-                const now = new Date();
-                document.getElementById('rTimestamp').innerText = `Emitido via DL Auto Peças - ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
-                return;
-            }
-
-            // SE ABA CREDIÁRIO
-            labelDocNum.innerText = "DOC Nº:";
-            document.getElementById('receiptNum').innerText = `#${state.docNumber}`;
-            document.getElementById('rClientName').innerText = name;
-            document.getElementById('rClientPhone').innerText = phone;
-            document.getElementById('rClientDoc').innerText = doc;
-            document.getElementById('rClientAddress').innerText = address;
-            document.getElementById('rIssueDate').innerText = issueDate;
-            document.getElementById('rDueDate').innerText = dueDate;
-            rowDueDate.classList.remove('hidden');
-            document.getElementById('receiptFooterMsg').innerText = "Agradecemos a preferência!";
-            rDiscountRow.classList.add('hidden');
-            rFinalBudgetRow.classList.add('hidden');
-
-            const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
-            
-            let totalGeral = 0;
-            state.items.forEach(i => totalGeral += (i.qty * i.price));
-
-            const itemsList = document.getElementById('receiptItemsList');
-
-            if (state.docMode === 'PENDING') {
-                watermark.innerText = "CREDIÁRIO";
-                watermark.className = "watermark text-red-900";
-                title.innerText = "*** CREDIÁRIO / EXTRATO DE DÉBITO ***";
-                payInfoBox.classList.add('hidden');
-                rPaidRow.classList.add('hidden');
-                rBalanceRow.classList.add('hidden');
-                remainingSection.classList.add('hidden');
-                pixSection.classList.remove('hidden');
-
-                if (state.items.length === 0) {
-                    itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Nenhuma peça pendente --</div>`;
-                } else {
-                    itemsList.innerHTML = state.items.map(item => {
-                        const subtotal = item.qty * item.price;
-                        return `
-                            <div class="flex justify-between items-start">
-                                <span class="pr-2">${item.qty}x ${item.desc}</span>
-                                <span class="font-bold">R$ ${subtotal.toFixed(2)}</span>
-                            </div>
-                        `;
-                    }).join('');
-                }
-
-                document.getElementById('labelTotalTitle').innerText = "TOTAL EM ABERTO:";
-                document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
-
-            } else {
-                // MODO QUITADO / PARCIAL
-                payInfoBox.classList.remove('hidden');
-                document.getElementById('rPaymentMethodName').innerText = paymentMethod;
-                rPaidRow.classList.remove('hidden');
-                rBalanceRow.classList.remove('hidden');
-                pixSection.classList.remove('hidden');
-
-                const paidItems = state.items.filter(i => checkedBoxes.includes(i.id));
-                const remainingItems = state.items.filter(i => !checkedBoxes.includes(i.id));
-
-                let totalRecebidoItens = 0;
-                paidItems.forEach(i => totalRecebidoItens += (i.qty * i.price));
-
-                const inputPartial = parseFloat(document.getElementById('partialPaidAmount').value);
-                let valorRecebidoReal = (!isNaN(inputPartial) && inputPartial > 0) ? inputPartial : (paidItems.length > 0 ? totalRecebidoItens : totalGeral);
-
-                const saldoRestante = Math.max(0, totalGeral - valorRecebidoReal);
-
-                if (saldoRestante > 0 && valorRecebidoReal < totalGeral) {
-                    watermark.innerText = "PAG. PARCIAL";
-                    watermark.className = "watermark text-amber-700";
-                    title.innerText = "*** COMPROVANTE DE PAGAMENTO PARCIAL ***";
-                } else {
-                    watermark.innerText = "RECEBIDO";
-                    watermark.className = "watermark text-emerald-800";
-                    title.innerText = "*** COMPROVANTE DE RECEBIMENTO / QUITADO ***";
-                }
-
-                if (paidItems.length === 0) {
-                    itemsList.innerHTML = `<div class="text-center italic text-slate-400 py-2">-- Pagamento Geral / Sem item específico marcado --</div>`;
-                } else {
-                    itemsList.innerHTML = paidItems.map(item => {
-                        const sub = item.qty * item.price;
-                        return `
-                            <div class="flex justify-between items-start font-bold text-emerald-900 bg-emerald-50/50 px-1 rounded">
-                                <span class="pr-2">✓ ${item.qty}x ${item.desc}</span>
-                                <span>R$ ${sub.toFixed(2)}</span>
-                            </div>
-                        `;
-                    }).join('');
-                }
-
-                document.getElementById('labelTotalTitle').innerText = "TOTAL DO EXTRATO:";
-                document.getElementById('rTotalAmount').innerText = `R$ ${totalGeral.toFixed(2)}`;
-                document.getElementById('rPaidAmount').innerText = `R$ ${valorRecebidoReal.toFixed(2)}`;
-                document.getElementById('rBalanceAmount').innerText = `R$ ${saldoRestante.toFixed(2)}`;
-
-                if (saldoRestante > 0 && remainingItems.length > 0) {
-                    remainingSection.classList.remove('hidden');
-                    const remList = document.getElementById('remainingPendingItemsList');
-                    remList.innerHTML = remainingItems.map(i => `
-                        <div class="flex justify-between">
-                            <span>• ${i.qty}x ${i.desc}</span>
-                            <span class="font-bold">R$ ${(i.qty * i.price).toFixed(2)}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    remainingSection.classList.add('hidden');
-                }
-            }
-
-            const now = new Date();
-            document.getElementById('rTimestamp').innerText = `Emitido via DL Auto Peças - ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
-        }
-
-        function clearClientPendingItems() {
-            if (state.currentClientKey && state.docMode === 'PAID') {
-                const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
-                if (checkedBoxes.length > 0) {
-                    checkedBoxes.forEach(itemId => {
-                        clientsRef.child(`${state.currentClientKey}/pendingItems/${itemId}`).remove();
-                    });
-                } else {
-                    clientsRef.child(`${state.currentClientKey}/pendingItems`).remove();
-                }
-                document.getElementById('partialPaidAmount').value = '';
-            }
-        }
-
-        function copyPixAndGenerateReceipt() {
-            const pixKey = "18.615.637/0001-58";
-            navigator.clipboard.writeText(pixKey).then(() => {
-                alert(`Chave PIX (CNPJ: ${pixKey}) copiada!\n\nAs peças selecionadas foram dadas como baixadas.`);
-                setDocumentMode('PAID');
-                clearClientPendingItems();
-            }).catch(() => {
-                setDocumentMode('PAID');
-                clearClientPendingItems();
-            });
-        }
-
-        function generatePDF() {
-            const element = document.getElementById('receiptContainer');
-            const docId = (state.activeTab === 'orcamento') ? state.budgetNumber : state.docNumber;
-            const prefix = (state.activeTab === 'orcamento') ? 'Orcamento' : 'Extrato';
-            
-            const opt = {
-                margin:       10,
-                filename:     `DL_AutoPecas_${prefix}_${docId}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: element.scrollWidth },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            // Pequeno atraso para garantir renderização correta antes da captura do PDF
-            setTimeout(() => {
-                html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-                    const { jsPDF } = window.jspdf;
-                    
-                    // Fallback nativo do html2pdf.js com segurança de DOM
-                    html2pdf().from(element).set(opt).save().then(() => {
-                        if (state.activeTab === 'crediario' && state.docMode === 'PAID') {
-                            clearClientPendingItems();
-                        }
-                    });
-                });
-            }, 100);
-        }
-
-        function sendWhatsAppText() {
-            const name = document.getElementById('clientName').value.trim() || 'Cliente';
-            const issueDate = formatDate(document.getElementById('issueDate').value);
-            const dueDate = formatDate(document.getElementById('dueDate').value);
-            const paymentMethod = document.getElementById('paymentMethod').value;
-
-            let total = 0;
-            state.items.forEach(i => total += (i.qty * i.price));
-            const checkedBoxes = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
-
-            let msg = "";
-
-            if (state.docMode === 'PAID') {
-                const paidItems = state.items.filter(i => checkedBoxes.includes(i.id));
-                const remainingItems = state.items.filter(i => !checkedBoxes.includes(i.id));
-                
-                let totalRec = 0;
-                paidItems.forEach(i => totalRec += (i.qty * i.price));
-                const inputPart = parseFloat(document.getElementById('partialPaidAmount').value);
-                let valRecReal = (!isNaN(inputPart) && inputPart > 0) ? inputPart : (paidItems.length > 0 ? totalRec : total);
-                let saldoRest = Math.max(0, total - valRecReal);
-
-                msg += `*DL AUTO PEÇAS - ${saldoRest > 0 ? 'COMPROVANTE DE PAGAMENTO PARCIAL' : 'COMPROVANTE DE PAGAMENTO'}* 📄✅\n`;
-                msg += `CNPJ: 18.615.637/0001-58\n`;
-                msg += `-----------------------------------\n`;
-                msg += `*Cliente:* ${name}\n`;
-                msg += `*Data:* ${issueDate} | *Pgto:* ${paymentMethod}\n`;
-                msg += `-----------------------------------\n`;
-                msg += `*PEÇAS RECEBIDAS:*\n`;
-                if (paidItems.length > 0) {
-                    paidItems.forEach(i => msg += `• ✓ ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`);
-                } else {
-                    msg += `(Pagamento geral do extrato)\n`;
-                }
-                msg += `-----------------------------------\n`;
-                msg += `*TOTAL EXTRATO:* R$ ${total.toFixed(2)}\n`;
-                msg += `*VALOR RECEBIDO:* R$ ${valRecReal.toFixed(2)}\n`;
-                msg += `*SALDO RESTANTE:* R$ ${saldoRest.toFixed(2)}\n`;
-
-                if (saldoRest > 0 && remainingItems.length > 0) {
-                    msg += `\n*PEÇAS PENDENTES EM ABERTO:*\n`;
-                    remainingItems.forEach(i => msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`);
-                }
-                msg += `\nAgradecemos a preferência! 🚗🔧`;
-
-                clearClientPendingItems();
-            } else {
-                msg += `*DL AUTO PEÇAS - EXTRATO DE CREDIÁRIO* 🛠️\n`;
-                msg += `CNPJ: 18.615.637/0001-58\n`;
-                msg += `-----------------------------------\n`;
-                msg += `*Cliente:* ${name}\n`;
-                msg += `*Emissão:* ${issueDate} | *Vencimento:* ${dueDate}\n`;
-                msg += `-----------------------------------\n`;
-                msg += `*PEÇAS / SERVIÇOS PENDENTES:*\n`;
-                state.items.forEach(i => msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`);
-                msg += `-----------------------------------\n`;
-                msg += `*TOTAL EM ABERTO:* R$ ${total.toFixed(2)}\n\n`;
-                msg += `*CHAVE PIX PARA PAGAMENTO:* CNPJ: 18.615.637/0001-58\n`;
-                msg += `*Favorecida:* DANIELLE APARECIDA BATISTA LOURENÇO\n\n`;
-                msg += `Qualquer dúvida estamos à disposição!`;
-            }
-
-            const phone = document.getElementById('clientPhone').value.replace(/\D/g, '');
-            const encoded = encodeURIComponent(msg);
-            
-            if (phone && phone.length >= 10) {
-                window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encoded}`, '_blank');
-            } else {
-                window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
-            }
-        }
-
-        function sendBudgetWhatsApp() {
-            const name = document.getElementById('clientName').value.trim() || 'Cliente';
-            let totalOrc = 0;
-            state.budgetItems.forEach(i => totalOrc += (i.qty * i.price));
-
-            const discType = document.getElementById('budgetDiscountType').value;
-            const discInputVal = parseFloat(document.getElementById('budgetDiscountValue').value) || 0;
-            let valorDescontoCalculado = 0;
-
-            if (discInputVal > 0) {
-                if (discType === 'porcentagem') {
-                    valorDescontoCalculado = (totalOrc * discInputVal) / 100;
-                } else {
-                    valorDescontoCalculado = Math.min(totalOrc, discInputVal);
-                }
-            }
-            const totalFinalOrc = Math.max(0, totalOrc - valorDescontoCalculado);
-
-            let msg = `*DL AUTO PEÇAS - ORÇAMENTO* 📋🚗\n`;
-            msg += `CNPJ: 18.615.637/0001-58\n`;
-            msg += `-----------------------------------\n`;
-            msg += `*Cliente:* ${name}\n`;
-            msg += `*Orçamento Nº:* #${state.budgetNumber}\n`;
-            msg += `-----------------------------------\n`;
-            msg += `*ITENS DO ORÇAMENTO:*\n`;
-            if (state.budgetItems.length === 0) {
-                msg += `Nenhum item adicionado.\n`;
-            } else {
-                state.budgetItems.forEach(i => msg += `• ${i.qty}x ${i.desc} - R$ ${(i.qty * i.price).toFixed(2)}\n`);
-            }
-            msg += `-----------------------------------\n`;
-            msg += `*SUBTOTAL:* R$ ${totalOrc.toFixed(2)}\n`;
-            if (valorDescontoCalculado > 0) {
-                msg += `*DESCONTO:* - R$ ${valorDescontoCalculado.toFixed(2)} ${discType === 'porcentagem' ? '(' + discInputVal + '%)' : ''}\n`;
-                msg += `*TOTAL COM DESCONTO:* R$ ${totalFinalOrc.toFixed(2)}\n`;
-            } else {
-                msg += `*TOTAL DO ORÇAMENTO:* R$ ${totalOrc.toFixed(2)}\n`;
-            }
-            msg += `\nOrçamento válido por 7 dias. Estamos à disposição!`;
-
-            const phone = document.getElementById('clientPhone').value.replace(/\D/g, '');
-            const encoded = encodeURIComponent(msg);
-            
-            if (phone && phone.length >= 10) {
-                window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encoded}`, '_blank');
-            } else {
-                window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
-            }
-        }
-
-        function shareAsImage() {
-            const receipt = document.getElementById('receiptContainer');
-            html2canvas(receipt, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                if (state.docMode === 'PAID') {
-                    clearClientPendingItems();
-                }
-                canvas.toBlob(async (blob) => {
-                    const phone = document.getElementById('clientPhone').value.replace(/\D/g, '');
-                    try {
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        await navigator.clipboard.write([item]);
-                        alert('Imagem copiada! Cole com CTRL+V no WhatsApp.');
-                    } catch (err) {
-                        const a = document.createElement('a');
-                        a.href = canvas.toDataURL('image/png');
-                        a.download = `DL_AutoPecas_${state.docNumber}.png`;
-                        a.click();
-                        alert('Imagem baixada! Anexe no WhatsApp.');
-                    }
-                    if (phone && phone.length >= 10) {
-                        window.open(`https://api.whatsapp.com/send?phone=55${phone}`, '_blank');
-                    } else {
-                        window.open(`https://api.whatsapp.com/send`, '_blank');
-                    }
-                });
-            });
-        }
-
-        function shareBudgetAsImage() {
-            const receipt = document.getElementById('receiptContainer');
-            html2canvas(receipt, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                canvas.toBlob(async (blob) => {
-                    const phone = document.getElementById('clientPhone').value.replace(/\D/g, '');
-                    try {
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        await navigator.clipboard.write([item]);
-                        alert('Orçamento copiado! Cole com CTRL+V no WhatsApp.');
-                    } catch (err) {
-                        const a = document.createElement('a');
-                        a.href = canvas.toDataURL('image/png');
-                        a.download = `DL_Orcamento_${state.budgetNumber}.png`;
-                        a.click();
-                        alert('Orçamento baixado! Anexe no WhatsApp.');
-                    }
-                    if (phone && phone.length >= 10) {
-                        window.open(`https://api.whatsapp.com/send?phone=55${phone}`, '_blank');
-                    } else {
-                        window.open(`https://api.whatsapp.com/send`, '_blank');
-                    }
-                });
-            });
-        }
-
-        async function openPiPWindow() {
-            if ('documentPictureInPicture' in window) {
-                try {
-                    const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 420, height: 650 });
-                    [...document.styleSheets].forEach(sheet => {
-                        try {
-                            const cssRules = [...sheet.cssRules].map(rule => rule.cssText).join('');
-                            const style = document.createElement('style');
-                            style.textContent = cssRules;
-                            pipWindow.document.head.appendChild(style);
-                        } catch (e) {
-                            const link = document.createElement('link');
-                            link.rel = 'stylesheet';
-                            link.href = sheet.href;
-                            pipWindow.document.head.appendChild(link);
-                        }
-                    });
-                    const clone = document.getElementById('receiptContainer').cloneNode(true);
-                    pipWindow.document.body.className = "bg-slate-200 p-3 flex justify-center items-center min-h-screen";
-                    pipWindow.document.body.appendChild(clone);
-                } catch (err) {
-                    alert('Erro ao abrir janela flutuante.');
-                }
-            } else {
-                alert('Recurso compatível com Google Chrome/Edge.');
-            }
-        }
-
-        function resetAllFields() {
-            state.items = [];
-            state.budgetItems = [];
-            state.currentClientKey = null;
-            state.docNumber = Math.floor(100000 + Math.random() * 900000);
-            state.budgetNumber = Math.floor(500000 + Math.random() * 900000);
-            
-            document.getElementById('selectSavedClient').value = '';
-            document.getElementById('clientName').value = '';
-            document.getElementById('clientPhone').value = '';
-            document.getElementById('clientDoc').value = '';
-            document.getElementById('clientAddress').value = '';
-            document.getElementById('partialPaidAmount').value = '';
-            document.getElementById('budgetDiscountValue').value = '0';
-
-            setDocumentMode('PENDING');
-            renderItemList();
-            renderBudgetItemsList();
-            updateReceipt();
-        }
-
-        function openClientModal() {
-            document.getElementById('clientModal').classList.remove('hidden');
-            renderClientModalList();
-        }
-
-        function closeClientModal() {
-            document.getElementById('clientModal').classList.add('hidden');
-        }
-
-        function renderClientModalList(filter = '') {
-            const listContainer = document.getElementById('modalClientList');
-            const keys = Object.keys(state.clients);
-
-            if (keys.length === 0) {
-                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400">Nenhum cliente cadastrado ainda.</div>`;
-                return;
-            }
-
-            const filtered = keys.filter(k => {
-                const c = state.clients[k];
-                if (!c) return false;
-                const term = filter.toLowerCase();
-                return (c.name || '').toLowerCase().includes(term) || (c.phone || '').toLowerCase().includes(term) || (c.doc || '').toLowerCase().includes(term);
-            });
-
-            listContainer.innerHTML = filtered.map(k => {
-                const c = state.clients[k];
-                const displayName = (c && c.name && c.name.trim() !== '') ? c.name : 'Sem nome';
-                const pendingCount = (c && c.pendingItems) ? Object.keys(c.pendingItems).length : 0;
-                
-                let totalDebito = 0;
-                if (c && c.pendingItems) {
-                    Object.values(c.pendingItems).forEach(i => totalDebito += (i.qty * i.price));
-                }
-
-                return `
-                    <div class="p-3 border border-slate-200 rounded-lg flex items-center justify-between hover:bg-slate-50 transition">
-                        <div>
-                            <p class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                ${displayName}
-                                ${pendingCount > 0 ? `<span class="bg-red-100 text-red-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-red-300">${pendingCount} peça(s) - R$ ${totalDebito.toFixed(2)}</span>` : '<span class="bg-green-100 text-green-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-green-300">Sem Débitos</span>'}
-                            </p>
-                            <p class="text-xs text-slate-500">Fone: ${c.phone || '---'} | CPF/CNPJ: ${c.doc || '---'}</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="loadSelectedClient('${k}'); closeClientModal()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold transition">
-                                Abrir Ficha
-                            </button>
-                            <button onclick="deleteClient('${k}')" class="p-1.5 text-slate-400 hover:text-red-600 text-xs transition">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function filterClientList() {
-            renderClientModalList(document.getElementById('searchClientInput').value);
-        }
-
-        function deleteClient(key) {
-            if (confirm('Deseja excluir este cliente?')) {
-                clientsRef.child(key).remove();
-            }
-        }
-
-        function deleteEmptyClients() {
-            if (confirm('Deseja excluir todos os cadastros vazios?')) {
-                Object.keys(state.clients).forEach(key => {
-                    const c = state.clients[key];
-                    if (!c || !c.name || c.name.trim() === '') {
-                        clientsRef.child(key).remove();
-                    }
-                });
-            }
-        }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return '00/00/0000';
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return dateStr;
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-    </script>
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${c.id}</strong><br><small style="color:#64748b">Doc: ${c.nf}</small></td>
+          <td><span class="badge ${badge}">${c.tipo}</span></td>
+          <td>${c.cliente}<br><small style="color:#64748b">${c.telefone}</small></td>
+          <td>${desc}</td>
+          <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
+          <td>${c.tipo === 'Garantia' ? `Até ${formatarDataBR(c.validade)}` : c.status}</td>
+          <td>
+            <button class="btn" style="background:#2563eb; color:white; padding:5px 9px;" onclick="imprimirPorId('${c.firebaseKey}')" title="Imprimir / PDF"><i class="fa-solid fa-file-pdf"></i> Imprimir</button>
+            <button class="btn btn-danger" style="padding:5px 9px;" onclick="deletarCupom('${c.firebaseKey}')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.imprimirPorId = function(firebaseKey) {
+      const item = cupons.find(c => c.firebaseKey === firebaseKey);
+      if (item) imprimirCupom(item);
+    }
+
+    function imprimirCupom(item) {
+      document.getElementById('p-tipo-doc').textContent = item.tipo === 'CT-e' ? 'DACTE - CT-E SIMPLIFICADO' : 'CUPOM DE ' + item.tipo.toUpperCase();
+      document.getElementById('p-codigo').textContent = item.id;
+      document.getElementById('p-nf').textContent = item.nf;
+      document.getElementById('p-emissao').textContent = formatarDataBR(item.emissao);
+      document.getElementById('p-valor').textContent = item.valor.toFixed(2);
+
+      const boxGarantia = document.getElementById('p-box-garantia');
+      const boxPix = document.getElementById('p-box-pix');
+      const boxCte = document.getElementById('p-box-cte');
+      const imgNotice = document.getElementById('p-notice-image');
+      const ticketCard = document.getElementById('p-ticket-card');
+      const rowProduto = document.getElementById('p-row-produto');
+      const rowCliente = document.getElementById('p-row-cliente');
+      const rowTelefone = document.getElementById('p-row-telefone');
+      const obsRodape = document.getElementById('p-obs-rodape');
+
+      if (item.tipo === 'Garantia') {
+        rowCliente.style.display = 'flex';
+        rowTelefone.style.display = 'flex';
+        rowProduto.style.display = 'flex';
+        boxCte.style.display = 'none';
+        
+        document.getElementById('p-cliente').textContent = item.cliente;
+        document.getElementById('p-telefone').textContent = item.telefone;
+        document.getElementById('p-lbl-prod').textContent = 'PRODUTO:';
+        document.getElementById('p-produto').textContent = item.produto;
+        document.getElementById('p-lbl-valor').textContent = 'VALOR:';
+        
+        boxGarantia.style.display = 'block';
+        boxPix.style.display = 'none';
+        document.getElementById('p-validade').textContent = formatarDataBR(item.validade);
+        
+        imgNotice.style.display = 'flex';
+        ticketCard.classList.add('has-border');
+        obsRodape.textContent = "Garantia de 90 dias contra defeitos de fabricação. Não cobre instalação incorreta ou mau uso.";
+      } else if (item.tipo === 'Estorno') {
+        rowCliente.style.display = 'flex';
+        rowTelefone.style.display = 'flex';
+        rowProduto.style.display = 'flex';
+        boxCte.style.display = 'none';
+
+        document.getElementById('p-cliente').textContent = item.cliente;
+        document.getElementById('p-telefone').textContent = item.telefone;
+        document.getElementById('p-lbl-prod').textContent = 'PRODUTO:';
+        document.getElementById('p-produto').textContent = item.produto;
+        document.getElementById('p-lbl-valor').textContent = 'VALOR:';
+        
+        boxGarantia.style.display = 'none';
+        boxPix.style.display = 'block';
+        document.getElementById('p-pix').textContent = item.pix;
+        
+        imgNotice.style.display = 'none';
+        ticketCard.classList.remove('has-border');
+        obsRodape.textContent = "Solicitação de estorno em processamento.";
+      } else if (item.tipo === 'Vale-Crédito') {
+        rowCliente.style.display = 'flex';
+        rowTelefone.style.display = 'flex';
+        rowProduto.style.display = 'none';
+        boxCte.style.display = 'none';
+
+        document.getElementById('p-cliente').textContent = item.cliente;
+        document.getElementById('p-telefone').textContent = item.telefone;
+        document.getElementById('p-lbl-valor').textContent = 'VALOR CRÉDITO:';
+
+        boxGarantia.style.display = 'none';
+        boxPix.style.display = 'none';
+        
+        imgNotice.style.display = 'none';
+        ticketCard.classList.remove('has-border');
+        obsRodape.textContent = "Vale-Crédito válido para utilização em compras futuras na loja.";
+      } else if (item.tipo === 'CT-e') {
+        rowCliente.style.display = 'none';
+        rowTelefone.style.display = 'none';
+        rowProduto.style.display = 'flex';
+        boxCte.style.display = 'block';
+
+        document.getElementById('p-cte-rem').textContent = item.cte_remetente;
+        document.getElementById('p-cte-dest').textContent = item.cte_destinatario;
+        document.getElementById('p-cte-rota').textContent = `${item.cte_origem} ➔ ${item.cte_destino}`;
+        document.getElementById('p-cte-cfop-rntrc').textContent = `${item.cte_cfop} / ${item.cte_rntrc}`;
+        document.getElementById('p-cte-chave').textContent = item.cte_chave;
+
+        document.getElementById('p-lbl-prod').textContent = 'CARGA:';
+        document.getElementById('p-produto').textContent = item.produto;
+        document.getElementById('p-lbl-valor').textContent = 'FRETE TOTAL:';
+
+        boxGarantia.style.display = 'none';
+        boxPix.style.display = 'none';
+
+        imgNotice.style.display = 'none';
+        ticketCard.classList.remove('has-border');
+        obsRodape.textContent = "Documento Auxiliar do Conhecimento de Transporte Eletrônico.";
+      }
+
+      window.print();
+    }
+
+    window.filterType = function(tipo, btn) {
+      currentFilter = tipo;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTable();
+    }
+
+    function updateKPIs() {
+      const garantias = cupons.filter(c => c.tipo === 'Garantia').length;
+      const estornos = cupons.filter(c => c.tipo === 'Estorno').reduce((s, c) => s + c.valor, 0);
+      const creditos = cupons.filter(c => c.tipo === 'Vale-Crédito').reduce((s, c) => s + c.valor, 0);
+      const ctes = cupons.filter(c => c.tipo === 'CT-e').reduce((s, c) => s + c.valor, 0);
+
+      document.getElementById('kpi-garantias').textContent = garantias;
+      document.getElementById('kpi-estornos').textContent = `R$ ${estornos.toFixed(2)}`;
+      document.getElementById('kpi-creditos').textContent = `R$ ${creditos.toFixed(2)}`;
+      document.getElementById('kpi-cte').textContent = `R$ ${ctes.toFixed(2)}`;
+    }
+
+    window.deletarCupom = function(firebaseKey) {
+      if (confirm('Deseja realmente excluir este registro do Firebase?')) {
+        const itemRef = ref(db, 'cupons/' + firebaseKey);
+        remove(itemRef);
+      }
+    }
+
+    window.filterTable = function() {
+      const text = document.getElementById('search-input').value.toLowerCase();
+      const rows = document.querySelectorAll('#table-body tr');
+      rows.forEach(r => {
+        r.style.display = r.textContent.toLowerCase().includes(text) ? '' : 'none';
+      });
+    }
+
+    window.exportCSV = function() {
+      let csv = 'Codigo,Tipo,DataEmissao,Validade,NF,Cliente,Produto,Valor,Status,ChaveCTE\n';
+      cupons.forEach(c => {
+        csv += `${c.id},${c.tipo},${formatarDataBR(c.emissao)},${formatarDataBR(c.validade)},${c.nf},"${c.cliente}","${c.produto}",${c.valor},${c.status},"${c.cte_chave || ''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Documentos_Firebase_DL.csv';
+      a.click();
+    }
+  </script>
 </body>
 </html>
