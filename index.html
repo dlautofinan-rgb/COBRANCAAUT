@@ -123,7 +123,7 @@
 
     .main-grid {
       display: grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: 480px 1fr;
       gap: 20px;
     }
 
@@ -147,6 +147,7 @@
     }
 
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
     .btn {
       padding: 9px 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
@@ -154,6 +155,8 @@
     }
     .btn-primary { background: var(--accent); color: white; width: 100%; justify-content: center; }
     .btn-danger { background: #fee2e2; color: var(--danger); }
+    .btn-secondary { background: #e2e8f0; color: #334155; }
+    .btn-secondary:hover { background: #cbd5e1; }
 
     table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.83rem; text-align: left; }
     th { background: #f1f5f9; color: #475569; font-weight: 700; padding: 12px; border-bottom: 1px solid #e2e8f0; }
@@ -165,8 +168,6 @@
     .badge-garantia { background: #dbeafe; color: #1e40af; }
     .badge-estorno { background: #fee2e2; color: #991b1b; }
     .badge-credito { background: #f3e8ff; color: #6b21a8; }
-    .badge-cte { background: #ffedd5; color: #c2410c; }
-    .badge-orcamento { background: #ccfbf1; color: #0f766e; }
 
     .preview-stamp-box {
       border: 2px dashed #003399;
@@ -183,6 +184,76 @@
 
     .screen-content { display: none; }
     .screen-content.active { display: block; }
+
+    /* ESTILOS ESPECÍFICOS DO GERENCIADOR DE ITENS DO ORÇAMENTO */
+    .items-builder {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f8fafc;
+      margin-bottom: 12px;
+    }
+
+    .items-builder h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-row-input {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 40px;
+      gap: 6px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .item-row-input input {
+      padding: 6px 8px;
+      font-size: 0.8rem;
+    }
+
+    .btn-icon-danger {
+      background: #fee2e2;
+      color: var(--danger);
+      border: none;
+      border-radius: 6px;
+      height: 32px;
+      width: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .orcamento-summary {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .orcamento-summary-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+      color: #166534;
+    }
+
+    .orcamento-summary-row.total {
+      font-weight: 800;
+      font-size: 1rem;
+      border-top: 1px dashed #86efac;
+      padding-top: 6px;
+      margin-top: 4px;
+      color: #14532d;
+    }
 
     /* FORMATO DE IMPRESSÃO */
     #printable-area {
@@ -204,7 +275,7 @@
     }
 
     .card-ticket {
-      width: 320px;
+      width: 330px;
       padding: 12px;
       box-sizing: border-box;
     }
@@ -241,6 +312,26 @@
     .ticket-body { font-size: 0.70rem; line-height: 1.35; }
     .ticket-row { display: flex; justify-content: space-between; margin-bottom: 3px; border-bottom: 1px dotted #ccc; padding-bottom: 2px; word-break: break-all; }
     .ticket-row label { font-weight: bold; margin-right: 4px; }
+
+    /* TABELA DE ITENS NO DUPON / IMPRESSO DE ORÇAMENTO */
+    .print-items-table {
+      width: 100%;
+      margin: 6px 0;
+      border-collapse: collapse;
+      font-size: 0.65rem;
+    }
+
+    .print-items-table th {
+      background: #f1f5f9;
+      padding: 3px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    .print-items-table td {
+      padding: 3px;
+      border: 1px solid #eee;
+    }
 
     .carimbo-mini {
       border: 2px double #003399;
@@ -297,7 +388,7 @@
         <i class="fa-solid fa-truck-fast"></i> Tela 2: Emissor de CT-e
       </button>
       <button class="screen-tab-btn" onclick="switchScreen('screen-orcamentos', this)">
-        <i class="fa-solid fa-calculator"></i> Tela 3: Orçamentos
+        <i class="fa-solid fa-calculator"></i> Tela 3: Orçamentos Detalhados
       </button>
     </nav>
 
@@ -516,11 +607,11 @@
       </main>
     </div>
 
-    <!-- ==================== TELA 3: ORÇAMENTOS ==================== -->
+    <!-- ==================== TELA 3: ORÇAMENTOS DETALHADOS ==================== -->
     <div id="screen-orcamentos" class="screen-content">
       <main class="main-grid">
         <section class="card">
-          <h2><i class="fa-solid fa-calculator" style="color: var(--teal);"></i> Novo Orçamento</h2>
+          <h2><i class="fa-solid fa-calculator" style="color: var(--teal);"></i> Novo Orçamento Detalhado</h2>
           <form id="form-orcamento">
             <div class="form-row">
               <div class="form-group">
@@ -533,30 +624,64 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label>Cliente / Razão Social</label>
-              <input type="text" id="o_cliente" required placeholder="Nome do Cliente">
-            </div>
-
-            <div class="form-group">
-              <label>WhatsApp / Telefone</label>
-              <input type="text" id="o_telefone" required placeholder="Ex: 11999999999">
-            </div>
-
-            <div class="form-group">
-              <label>Descrição das Peças / Serviços</label>
-              <input type="text" id="o_produto" required placeholder="Ex: Amortecedores dianteiros + Mão de Obra">
-            </div>
-
             <div class="form-row">
               <div class="form-group">
-                <label>Valor Total do Orçamento (R$)</label>
-                <input type="number" step="0.01" id="o_valor" required placeholder="0.00">
+                <label>Cliente / Razão Social</label>
+                <input type="text" id="o_cliente" required placeholder="Nome do Cliente">
               </div>
               <div class="form-group">
-                <label>Validade do Orçamento (10 Dias)</label>
+                <label>WhatsApp / Telefone</label>
+                <input type="text" id="o_telefone" required placeholder="Ex: 11999999999">
+              </div>
+            </div>
+
+            <!-- GERENCIADOR MULTI-PEÇAS / ITENS -->
+            <div class="items-builder">
+              <h3>
+                <span><i class="fa-solid fa-list-ol"></i> Peças / Serviços do Orçamento</span>
+                <button type="button" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.75rem;" onclick="addOrcamentoItem()">
+                  <i class="fa-solid fa-plus"></i> Add Peça
+                </button>
+              </h3>
+              <div id="o_items_container">
+                <!-- Linhas inseridas via JS -->
+              </div>
+            </div>
+
+            <!-- VALORES: SUB-TOTAL, DESCONTO E FRETE -->
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Desconto (R$)</label>
+                <input type="number" step="0.01" id="o_desconto" value="0.00" oninput="recalculaTotalOrcamento()" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label>Frete / Entrega (R$)</label>
+                <input type="number" step="0.01" id="o_frete" value="0.00" oninput="recalculaTotalOrcamento()" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label>Validade (10 Dias)</label>
                 <input type="text" id="o_validade_exibicao" readonly style="background:#e2e8f0; font-weight:bold;" placeholder="DD/MM/AAAA">
                 <input type="hidden" id="o_validade">
+              </div>
+            </div>
+
+            <!-- PAINEL DE RESUMO DOS VALORES -->
+            <div class="orcamento-summary">
+              <div class="orcamento-summary-row">
+                <span>Subtotal das Peças:</span>
+                <span id="o_sum_subtotal">R$ 0,00</span>
+              </div>
+              <div class="orcamento-summary-row" style="color: var(--danger);">
+                <span>(-) Desconto:</span>
+                <span id="o_sum_desconto">R$ 0,00</span>
+              </div>
+              <div class="orcamento-summary-row" style="color: var(--orange);">
+                <span>(+) Frete / Entrega:</span>
+                <span id="o_sum_frete">R$ 0,00</span>
+              </div>
+              <div class="orcamento-summary-row total">
+                <span>VALOR TOTAL:</span>
+                <span id="o_sum_total">R$ 0,00</span>
               </div>
             </div>
 
@@ -581,8 +706,9 @@
                 <tr>
                   <th>Código</th>
                   <th>Cliente</th>
-                  <th>Peças / Serviço</th>
-                  <th>Valor</th>
+                  <th>Peças / Qtd.</th>
+                  <th>Detalhamento</th>
+                  <th>Total</th>
                   <th>Válido Até</th>
                   <th>Ações</th>
                 </tr>
@@ -651,12 +777,41 @@
             </div>
           </div>
 
+          <!-- TABELA DE ITENS EXCLUSIVA DE ORÇAMENTO -->
+          <div id="p-box-orcamento-itens" style="display:none;">
+            <div style="font-weight:bold; margin-top:4px; font-size:0.68rem; text-align:center;">RELAÇÃO DE PEÇAS / SERVIÇOS</div>
+            <table class="print-items-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style="width:35px; text-align:center;">Qtd</th>
+                  <th style="width:50px; text-align:right;">Unit.</th>
+                  <th style="width:55px; text-align:right;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="p-orcamento-tb-body"></tbody>
+            </table>
+
+            <div class="ticket-row">
+              <label>SUBTOTAL PEÇAS:</label>
+              <span>R$ <span id="p-orc-subtotal">0,00</span></span>
+            </div>
+            <div class="ticket-row" id="p-row-desconto">
+              <label>DESCONTO:</label>
+              <span>- R$ <span id="p-orc-desconto">0,00</span></span>
+            </div>
+            <div class="ticket-row" id="p-row-frete">
+              <label>FRETE / ENTREGA:</label>
+              <span>+ R$ <span id="p-orc-frete">0,00</span></span>
+            </div>
+          </div>
+
           <div class="ticket-row" id="p-row-produto">
             <label id="p-lbl-prod">PRODUTO:</label>
             <span id="p-produto"></span>
           </div>
           <div class="ticket-row">
-            <label id="p-lbl-valor">VALOR:</label>
+            <label id="p-lbl-valor">VALOR TOTAL:</label>
             <span>R$ <span id="p-valor"></span></span>
           </div>
 
@@ -696,7 +851,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT FIREBASE -->
+  <!-- SCRIPT FIREBASE E LÓGICA DO SISTEMA -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -741,6 +896,9 @@
       calcValidadeCupons();
       calcValidadeOrcamento();
       toggleFormCupons();
+
+      // Inicia a primeira linha de item no orçamento
+      addOrcamentoItem();
     });
 
     window.calcValidadeCupons = function() {
@@ -797,6 +955,56 @@
         inputProd.required = false;
         inputProd.value = '';
       }
+    }
+
+    // ==================== LÓGICA DO GERENCIADOR DE PEÇAS / ORÇAMENTO ====================
+    window.addOrcamentoItem = function() {
+      const container = document.getElementById('o_items_container');
+      const rowId = 'item_' + Date.now();
+      const div = document.createElement('div');
+      div.className = 'item-row-input';
+      div.id = rowId;
+      div.innerHTML = `
+        <input type="text" placeholder="Peça / Serviço" class="o-item-nome" required>
+        <input type="number" placeholder="Qtd" value="1" min="1" class="o-item-qtd" oninput="recalculaTotalOrcamento()" required>
+        <input type="number" step="0.01" placeholder="Valor R$" class="o-item-valor" oninput="recalculaTotalOrcamento()" required>
+        <button type="button" class="btn-icon-danger" onclick="removeOrcamentoItem('${rowId}')"><i class="fa-solid fa-trash"></i></button>
+      `;
+      container.appendChild(div);
+      recalculaTotalOrcamento();
+    }
+
+    window.removeOrcamentoItem = function(rowId) {
+      const container = document.getElementById('o_items_container');
+      if (container.children.length <= 1) {
+        alert("O orçamento deve conter pelo menos uma peça/serviço.");
+        return;
+      }
+      document.getElementById(rowId).remove();
+      recalculaTotalOrcamento();
+    }
+
+    window.recalculaTotalOrcamento = function() {
+      const rows = document.querySelectorAll('#o_items_container .item-row-input');
+      let subtotal = 0;
+
+      rows.forEach(row => {
+        const qtd = parseFloat(row.querySelector('.o-item-qtd').value) || 0;
+        const vUnit = parseFloat(row.querySelector('.o-item-valor').value) || 0;
+        subtotal += (qtd * vUnit);
+      });
+
+      const desconto = parseFloat(document.getElementById('o_desconto').value) || 0;
+      const frete = parseFloat(document.getElementById('o_frete').value) || 0;
+      let total = subtotal - desconto + frete;
+      if (total < 0) total = 0;
+
+      document.getElementById('o_sum_subtotal').textContent = `R$ ${subtotal.toFixed(2)}`;
+      document.getElementById('o_sum_desconto').textContent = `R$ ${desconto.toFixed(2)}`;
+      document.getElementById('o_sum_frete').textContent = `R$ ${frete.toFixed(2)}`;
+      document.getElementById('o_sum_total').textContent = `R$ ${total.toFixed(2)}`;
+
+      return { subtotal, desconto, frete, total };
     }
 
     // LISTENER EM TEMPO REAL FIREBASE
@@ -871,9 +1079,28 @@
       });
     });
 
-    // CADASTRO TELA 3 (ORÇAMENTO)
+    // CADASTRO TELA 3 (ORÇAMENTO DETALHADO)
     document.getElementById('form-orcamento').addEventListener('submit', (e) => {
       e.preventDefault();
+      
+      const itensOrcamento = [];
+      const rows = document.querySelectorAll('#o_items_container .item-row-input');
+      rows.forEach(row => {
+        const nome = row.querySelector('.o-item-nome').value;
+        const qtd = parseFloat(row.querySelector('.o-item-qtd').value) || 0;
+        const vUnit = parseFloat(row.querySelector('.o-item-valor').value) || 0;
+        if (nome && qtd > 0) {
+          itensOrcamento.push({ nome, qtd, vUnit, subtotalItem: qtd * vUnit });
+        }
+      });
+
+      if (itensOrcamento.length === 0) {
+        alert("Preencha ao menos uma peça ou serviço válido no orçamento.");
+        return;
+      }
+
+      const { subtotal, desconto, frete, total } = recalculaTotalOrcamento();
+
       const item = {
         id: 'ORC-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
         tipo: 'Orçamento',
@@ -882,14 +1109,20 @@
         validade: document.getElementById('o_validade').value,
         cliente: document.getElementById('o_cliente').value,
         telefone: document.getElementById('o_telefone').value,
-        produto: document.getElementById('o_produto').value,
-        valor: parseFloat(document.getElementById('o_valor').value) || 0,
+        itens: itensOrcamento,
+        subtotal: subtotal,
+        desconto: desconto,
+        frete: frete,
+        valor: total,
+        produto: itensOrcamento.map(i => `${i.qtd}x ${i.nome}`).join(', '),
         status: 'Pendente'
       };
 
       push(cuponsRef, item).then(() => {
         imprimirCupom(item);
         e.target.reset();
+        document.getElementById('o_items_container').innerHTML = '';
+        addOrcamentoItem();
         document.getElementById('o_data_emissao').value = new Date().toISOString().split('T')[0];
         calcValidadeOrcamento();
       });
@@ -943,11 +1176,14 @@
       tb3.innerHTML = '';
       const list3 = cupons.filter(c => c.tipo === 'Orçamento');
       list3.forEach(c => {
+        const qtdItens = c.itens ? c.itens.length : 1;
+        const descValores = `Desc: R$ ${(c.desconto || 0).toFixed(2)} | Frete: R$ ${(c.frete || 0).toFixed(2)}`;
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${c.id}</strong><br><small style="color:#64748b">Ped: ${c.nf}</small></td>
           <td>${c.cliente}<br><small style="color:#64748b">${c.telefone}</small></td>
-          <td>${c.produto}</td>
+          <td><span class="badge badge-garantia">${qtdItens} item(ns)</span></td>
+          <td><small>${c.produto.substring(0, 45)}...</small><br><small style="color:#64748b">${descValores}</small></td>
           <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
           <td>Até ${formatarDataBR(c.validade)}</td>
           <td>
@@ -974,6 +1210,7 @@
       const boxGarantia = document.getElementById('p-box-garantia');
       const boxPix = document.getElementById('p-box-pix');
       const boxCte = document.getElementById('p-box-cte');
+      const boxOrcamentoItens = document.getElementById('p-box-orcamento-itens');
       const imgNotice = document.getElementById('p-notice-image');
       const ticketCard = document.getElementById('p-ticket-card');
       const rowProduto = document.getElementById('p-row-produto');
@@ -986,6 +1223,7 @@
         rowTelefone.style.display = 'flex';
         rowProduto.style.display = 'flex';
         boxCte.style.display = 'none';
+        boxOrcamentoItens.style.display = 'none';
 
         document.getElementById('p-cliente').textContent = item.cliente;
         document.getElementById('p-telefone').textContent = item.telefone;
@@ -1007,14 +1245,41 @@
       } else if (item.tipo === 'Orçamento') {
         rowCliente.style.display = 'flex';
         rowTelefone.style.display = 'flex';
-        rowProduto.style.display = 'flex';
+        rowProduto.style.display = 'none';
         boxCte.style.display = 'none';
 
         document.getElementById('p-cliente').textContent = item.cliente;
         document.getElementById('p-telefone').textContent = item.telefone;
-        document.getElementById('p-lbl-prod').textContent = 'PEÇA / SERVIÇO:';
-        document.getElementById('p-produto').textContent = item.produto;
         document.getElementById('p-lbl-valor').textContent = 'VALOR TOTAL:';
+
+        // Preenche tabela de itens do orçamento
+        boxOrcamentoItens.style.display = 'block';
+        const tbody = document.getElementById('p-orcamento-tb-body');
+        tbody.innerHTML = '';
+
+        if (item.itens && item.itens.length > 0) {
+          item.itens.forEach(it => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${it.nome}</td>
+              <td style="text-align:center;">${it.qtd}</td>
+              <td style="text-align:right;">${it.vUnit.toFixed(2)}</td>
+              <td style="text-align:right;">${it.subtotalItem.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td colspan="4">${item.produto}</td>`;
+          tbody.appendChild(tr);
+        }
+
+        document.getElementById('p-orc-subtotal').textContent = (item.subtotal || item.valor).toFixed(2);
+        document.getElementById('p-orc-desconto').textContent = (item.desconto || 0).toFixed(2);
+        document.getElementById('p-orc-frete').textContent = (item.frete || 0).toFixed(2);
+
+        document.getElementById('p-row-desconto').style.display = (item.desconto && item.desconto > 0) ? 'flex' : 'none';
+        document.getElementById('p-row-frete').style.display = (item.frete && item.frete > 0) ? 'flex' : 'none';
 
         boxGarantia.style.display = 'block';
         document.getElementById('p-lbl-gar-titulo').textContent = 'TIPO:';
@@ -1032,6 +1297,7 @@
         rowTelefone.style.display = 'flex';
         rowProduto.style.display = 'flex';
         boxCte.style.display = 'none';
+        boxOrcamentoItens.style.display = 'none';
 
         document.getElementById('p-cliente').textContent = item.cliente;
         document.getElementById('p-telefone').textContent = item.telefone;
@@ -1051,6 +1317,7 @@
         rowTelefone.style.display = 'flex';
         rowProduto.style.display = 'none';
         boxCte.style.display = 'none';
+        boxOrcamentoItens.style.display = 'none';
 
         document.getElementById('p-cliente').textContent = item.cliente;
         document.getElementById('p-telefone').textContent = item.telefone;
@@ -1067,6 +1334,7 @@
         rowTelefone.style.display = 'none';
         rowProduto.style.display = 'flex';
         boxCte.style.display = 'block';
+        boxOrcamentoItens.style.display = 'none';
 
         document.getElementById('p-cte-rem').textContent = item.cte_remetente;
         document.getElementById('p-cte-dest').textContent = item.cte_destinatario;
@@ -1110,9 +1378,9 @@
     }
 
     window.exportCSV = function() {
-      let csv = 'Codigo,Tipo,DataEmissao,Validade,NF,Cliente,Produto,Valor,Status\n';
+      let csv = 'Codigo,Tipo,DataEmissao,Validade,NF,Cliente,Produto,Subtotal,Desconto,Frete,ValorTotal,Status\n';
       cupons.forEach(c => {
-        csv += `${c.id},${c.tipo},${formatarDataBR(c.emissao)},${formatarDataBR(c.validade)},${c.nf},"${c.cliente}","${c.produto}",${c.valor},${c.status}\n`;
+        csv += `${c.id},${c.tipo},${formatarDataBR(c.emissao)},${formatarDataBR(c.validade)},${c.nf},"${c.cliente}","${c.produto}",${c.subtotal || c.valor},${c.desconto || 0},${c.frete || 0},${c.valor},${c.status}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
